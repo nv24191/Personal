@@ -6,10 +6,18 @@
     "background_color": "#231F20",
     "theme_color": "#16121a",
     "description": "",
-    "icons": [{
-      "src": "../branding/primary-logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    }]
+    "icons": [
+      {
+        "src": "../branding/icon-only.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any"
+      },
+      {
+        "src": "../branding/primary-logo.png",
+        "sizes": "640x720",
+        "type": "image/png",
+        "purpose": "any"
+      }
+    ]
   }

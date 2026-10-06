@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b1020">
-  <link rel="icon" href="../branding/octo-industries-logo-source.jpg" type="image/jpeg">
+  <link rel="icon" href="../branding/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="../branding/favicon.ico">
   <title>Game Room | Choose a game</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap');
@@ -49,11 +50,8 @@
       border-bottom: 1px solid var(--line);
     }
 
-    .brand { display: flex; align-items: center; gap: 12px; }
-
-    .brand { gap: 10px; }
-    .brand-icon { display: block; width: 42px; height: 42px; flex: 0 0 auto; overflow: hidden; border-radius: 50%; background: #11131a; }
-    .brand-icon img { display: block; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: screen; }
+    .brand { display: flex; align-items: center; }
+    .brand-logo { display: block; width: min(260px, 48vw); height: auto; }
 
     .status {
       color: var(--muted);
@@ -195,7 +193,7 @@
 <body>
   <div class="shell">
     <header>
-      <div class="brand"><span class="brand-icon"><img src="../branding/octo-industries-logo-source.jpg" alt=""></span><div class="brand-name">Octo Industries</div></div>
+      <a class="brand" href="../../index.html#home" aria-label="Octo Industries Game Hub home"><img class="brand-logo" src="../branding/horizontal-logo.png" alt="Octo Industries"></a>
       <div class="status">Game Room / 05 titles ready</div>
     </header>
 

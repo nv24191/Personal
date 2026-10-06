@@ -1,3 +1,5 @@
+![Octo Industries](./Octo-Industries/branding/horizontal-logo.png)
+
 # Octo Industries™ Game Hub
 
 Octo Industries is a static, touch-friendly game launcher. The repository-root `index.html` is the homepage and works with GitHub Pages, Codespaces, and other static hosts. No frontend framework or runtime service is required.
@@ -42,4 +44,21 @@ Run `npm --prefix Octo-Industries/BehindTheScenes run sync` after changing game 
 
 ## Branding assets
 
-The official logo variants live in `Octo-Industries/branding/`: `primary-logo.svg` for prominent hub branding, `compact-logo.svg` for tight spaces, and `watermark-logo.svg` for icons and game watermarks. Game pages load the shared `game-branding.css` and `game-branding.js` to display the same responsive top-left badge and non-interactive bottom-right watermark. Keep the branding directory with the game projects when hosting or packaging the site.
+The existing artwork in `Octo-Industries/branding/octo-industries-logo-source.jpg` remains the source of truth. The transparent, color-preserving octopus cutout powers the complete logo system:
+
+- `primary-logo.svg` / `.png` — stacked octopus and wordmark for splash screens and branding.
+- `horizontal-logo.svg` / `.png` — octopus plus wordmark for hub headers and navigation.
+- `home-button.svg` / `.png` — circular, text-free, clickable in-game home mark.
+- `icon-only.svg` / `.png` — octopus-only icon for app marks, badges, and metadata.
+- `watermark-logo.svg` / `.png` — transparent, text-free watermark artwork.
+- `favicon.svg`, `favicon.png`, and `favicon.ico` — browser and app icon sizes, including `apple-touch-icon.png`.
+
+Game pages use the circular home button, linking back to the hub, and a non-interactive icon-only watermark at 15% opacity. Drag the home button to any corner; its position is saved and shared between games. Keyboard users can focus the button and use the arrow keys to change corners. The watermark moves to the opposite bottom corner if needed to avoid overlap. The shared overlay is maintained by `game-branding.css` and `game-branding.js`. Keep the branding directory with the game projects when hosting or packaging the site.
+
+| Logo variant | Preview |
+| --- | --- |
+| Primary | <img src="./Octo-Industries/branding/primary-logo.png" width="90" alt="Primary Octo Industries logo"> |
+| Circular home button | <img src="./Octo-Industries/branding/home-button.png" width="64" alt="Circular Octo Industries home button"> |
+| Icon only | <img src="./Octo-Industries/branding/icon-only.png" width="64" alt="Octo Industries icon"> |
+| Watermark | <img src="./Octo-Industries/branding/watermark-logo.png" width="64" alt="Octo Industries watermark"> |
+| Horizontal hub logo | <img src="./Octo-Industries/branding/horizontal-logo.png" width="160" alt="Horizontal Octo Industries logo"> |
