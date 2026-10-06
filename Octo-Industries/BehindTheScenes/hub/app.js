@@ -13,6 +13,8 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let activeCategory = 'All';
 let slideIndex = 0;
 let searchTimer;
+let activeGallery;
+let galleryIndex = 0;
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -54,6 +56,7 @@ function categories() {
 function gameCard(game, index) {
   const tags = [game.category, ...(game.tags || [])].filter((tag, position, list) => list.indexOf(tag) === position).slice(0, 2);
   const hasThumbnail = Boolean(game.thumbnail);
+  const hasGallery = Array.isArray(game.screenshots) && game.screenshots.length > 0;
   return `
     <article class="game-card" style="animation-delay:${Math.min(index * 45, 225)}ms" data-game-id="${escapeHtml(game.id)}">
       <a class="game-art" data-category="${escapeHtml(game.category)}" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}" aria-label="Play ${escapeHtml(game.title)}">
@@ -62,9 +65,38 @@ function gameCard(game, index) {
       </a>
       <div class="game-card-copy">
         <div><div class="game-heading-line"><h3>${escapeHtml(game.title)}</h3><span class="category-label">${escapeHtml(game.category.toUpperCase())}</span></div><p class="game-description">${escapeHtml(game.description)}</p></div>
-        <div class="game-card-foot"><div class="game-tags">${tags.map((tag) => `<span class="game-tag">#${escapeHtml(tag.toLowerCase())}</span>`).join('')}</div><a class="play-link" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}"><span aria-hidden="true">▶</span> PLAY</a></div>
+        <div class="game-card-foot"><div class="game-tags">${tags.map((tag) => `<span class="game-tag">#${escapeHtml(tag.toLowerCase())}</span>`).join('')}</div><div class="game-card-actions">${hasGallery ? `<button class="gallery-link" type="button" data-gallery-id="${escapeHtml(game.id)}" aria-label="View ${escapeHtml(game.title)} screenshots">IMAGES</button>` : ''}<a class="play-link" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}"><span aria-hidden="true">▶</span> PLAY</a></div></div>
       </div>
     </article>`;
+}
+
+function renderGalleryImage() {
+  if (!activeGallery) return;
+  const image = document.querySelector('#gallery-image');
+  const screenshot = activeGallery.screenshots[galleryIndex];
+  image.src = screenshot;
+  image.alt = `${activeGallery.title} gameplay screenshot ${galleryIndex + 1}`;
+  document.querySelector('#gallery-caption').textContent = `Screenshot ${galleryIndex + 1} of ${activeGallery.screenshots.length}`;
+  document.querySelector('#gallery-count').textContent = `${String(galleryIndex + 1).padStart(2, '0')} / ${String(activeGallery.screenshots.length).padStart(2, '0')}`;
+  document.querySelectorAll('#gallery-thumbnails [data-gallery-index]').forEach((button, index) => {
+    button.setAttribute('aria-pressed', String(index === galleryIndex));
+  });
+  document.querySelector('#gallery-previous').disabled = activeGallery.screenshots.length < 2;
+  document.querySelector('#gallery-next').disabled = activeGallery.screenshots.length < 2;
+}
+
+function openGallery(game) {
+  if (!Array.isArray(game.screenshots) || !game.screenshots.length) return;
+  activeGallery = game;
+  galleryIndex = 0;
+  document.querySelector('#gallery-title').textContent = game.title;
+  document.querySelector('#gallery-thumbnails').innerHTML = game.screenshots.map((screenshot, index) => `
+    <button type="button" data-gallery-index="${index}" aria-label="Show screenshot ${index + 1}" aria-pressed="${index === 0}">
+      <img src="${escapeHtml(screenshot)}" alt="" loading="lazy">
+    </button>`).join('');
+  renderGalleryImage();
+  document.querySelector('#screenshot-gallery').showModal();
+  document.querySelector('#gallery-close').focus();
 }
 
 function getMatches() {
@@ -181,6 +213,29 @@ function bindEvents() {
   document.querySelector('#feature-previous').addEventListener('click', () => showSlide(-1));
   document.querySelector('#feature-next').addEventListener('click', () => showSlide(1));
 
+  document.querySelector('#gallery-close').addEventListener('click', () => {
+    document.querySelector('#screenshot-gallery').close();
+  });
+  document.querySelector('#gallery-previous').addEventListener('click', () => {
+    if (!activeGallery) return;
+    galleryIndex = (galleryIndex - 1 + activeGallery.screenshots.length) % activeGallery.screenshots.length;
+    renderGalleryImage();
+  });
+  document.querySelector('#gallery-next').addEventListener('click', () => {
+    if (!activeGallery) return;
+    galleryIndex = (galleryIndex + 1) % activeGallery.screenshots.length;
+    renderGalleryImage();
+  });
+  document.querySelector('#gallery-thumbnails').addEventListener('click', (event) => {
+    const thumbnail = event.target.closest('[data-gallery-index]');
+    if (!thumbnail || !activeGallery) return;
+    galleryIndex = Number(thumbnail.dataset.galleryIndex);
+    renderGalleryImage();
+  });
+  document.querySelector('#screenshot-gallery').addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) event.currentTarget.close();
+  });
+
   let touchStart;
   document.querySelector('#featured-frame').addEventListener('touchstart', (event) => {
     touchStart = event.changedTouches[0].clientX;
@@ -193,6 +248,11 @@ function bindEvents() {
   }, { passive: true });
 
   document.addEventListener('click', (event) => {
+    const gallery = event.target.closest('[data-gallery-id]');
+    if (gallery && byId.has(gallery.dataset.galleryId)) {
+      openGallery(byId.get(gallery.dataset.galleryId));
+      return;
+    }
     const launch = event.target.closest('[data-launch-id]');
     if (launch && byId.has(launch.dataset.launchId)) markPlayed(byId.get(launch.dataset.launchId));
     if (event.target.closest('#primary-nav a')) {
@@ -210,6 +270,12 @@ function bindEvents() {
   });
 
   document.addEventListener('keydown', (event) => {
+    if (document.querySelector('#screenshot-gallery').open && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      event.preventDefault();
+      galleryIndex = (galleryIndex + (event.key === 'ArrowRight' ? 1 : -1) + activeGallery.screenshots.length) % activeGallery.screenshots.length;
+      renderGalleryImage();
+      return;
+    }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
       document.querySelector('#games').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });

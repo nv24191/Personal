@@ -19,15 +19,16 @@ Open `http://localhost:8080/`. Run the server from the repository root, not from
 
 ## Discover and add games
 
-`npm --prefix Octo-Industries/BehindTheScenes run sync` reads `game.json` metadata when available and automatically detects top-level game folders with an `index.html`. It validates launch paths and regenerates `Octo-Industries/BehindTheScenes/hub/catalog.js`. Manifest metadata supplies its title, description, category, tags, thumbnail, launch path, and optional featured status. Missing thumbnail files are allowed; invalid launch paths stop the sync with an error.
+`npm --prefix Octo-Industries/BehindTheScenes run sync` reads `game.json` metadata when available and automatically detects top-level game folders with an `index.html`. It validates launch paths and regenerates `Octo-Industries/BehindTheScenes/hub/catalog.js`. Manifest metadata supplies its title, description, category, tags, thumbnail, launch path, optional featured status, and optional screenshot list. If `screenshots` is omitted, supported image files in the game's `screenshots/` folder are added to its hub gallery automatically. Invalid launch or screenshot paths stop the sync with an error.
 
-Add a game directory directly beneath `Octo-Industries/` with an `index.html`; the catalog sync automatically creates a title from the directory name, an `Other` category, basic tags, and a description. It looks for original promotional artwork named `logo`, `cover`, `title`, or `icon` (SVG, PNG, WebP, JPEG) and places it edge-to-edge in the shared 16:9 banner. It does not add generated titles or descriptions to the artwork and does not use gameplay screenshots. Add `game.json` with a curated `bannerSource` when artwork uses a different name; `bannerFit: "contain"` preserves transparent logo artwork, while the default cover fit fills the banner. The generated `hub-banner.svg` embeds its source art, so it loads offline at a consistent aspect ratio. The sync runs locally with `npm --prefix Octo-Industries/BehindTheScenes run sync` and automatically during Render deployment.
+Add a game directory directly beneath `Octo-Industries/` with an `index.html`; the catalog sync automatically creates a title from the directory name, an `Other` category, basic tags, and a description. For banner art, it prefers the first original screenshot in `screenshots/`, then looks for promotional artwork named `logo`, `cover`, `title`, or `icon` (SVG, PNG, WebP, JPEG). Add `game.json` with a curated `bannerSource` when needed; `bannerFit: "contain"` preserves transparent logo artwork, while the default cover fit fills the shared 16:9 banner. The hub provides a browsable screenshot gallery when local screenshots are available. Generated `hub-banner.svg` files embed their source art, so they load offline at a consistent aspect ratio. The sync runs locally with `npm --prefix Octo-Industries/BehindTheScenes run sync` and automatically during Render deployment.
 
 ## Game projects
 
 - `Octo-Industries/Block-Blast/` — Unity WebGL puzzle game.
 - `Octo-Industries/Endless-Siege/` — HTML5 tower defense game.
 - `Octo-Industries/Idle-Mining-Empire/` — locally hosted original HTML5 idle-mining game.
+- `Octo-Industries/Red-Ball-4/` — locally hosted original Unity WebGL platform game, with offline caching and a local screenshot gallery.
 - `Octo-Industries/Ragdoll-Archers/` — Unity WebGL archery game.
 - `Octo-Industries/Stickman-Hook/` — browser-based swinging platform game.
 - `Octo-Industries/Toss-The-Turtle/` — Flash game launched locally by the bundled Ruffle player.

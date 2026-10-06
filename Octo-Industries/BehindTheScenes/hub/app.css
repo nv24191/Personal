@@ -228,9 +228,30 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .game-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid rgba(191, 221, 232, .1); }
 .game-tags { display: flex; min-width: 0; overflow: hidden; gap: 6px; }
 .game-tag { overflow: hidden; color: #8298a0; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.game-card-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+.gallery-link { display: inline-flex; min-width: 66px; min-height: 44px; align-items: center; justify-content: center; padding-inline: 8px; border: 1px solid rgba(191, 221, 232, .17); background: rgba(191, 221, 232, .04); color: #a9bec7; cursor: pointer; font-size: 8px; font-weight: 700; transition: border-color .2s ease, color .2s ease, background .2s ease; }
+.gallery-link:hover { border-color: var(--cyan); background: rgba(101, 230, 227, .1); color: #eafcff; }
 .play-link { display: inline-flex; min-width: 76px; min-height: 44px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 8px; padding-inline: 10px; border: 1px solid rgba(101, 230, 227, .32); background: rgba(23, 201, 255, .07); color: #c9faff; font-size: 9px; font-weight: 700; transition: border-color .2s ease, background .2s ease, color .2s ease; }
 .play-link:hover { border-color: var(--cyan); background: var(--cyan); color: #07191d; }
 .play-link span { font-size: 8px; }
+.screenshot-gallery { width: min(1040px, calc(100vw - 32px)); max-width: none; max-height: min(900px, calc(100dvh - 32px)); padding: 0; overflow: auto; border: 1px solid rgba(101, 230, 227, .28); background: #09151e; color: var(--paper); box-shadow: 0 28px 90px rgba(0, 0, 0, .64); }
+.screenshot-gallery::backdrop { background: rgba(3, 9, 14, .82); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.gallery-panel { padding: clamp(15px, 3vw, 28px); }
+.gallery-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.gallery-header .eyebrow { margin-bottom: 5px; }
+.gallery-header h2 { margin: 0; font-family: var(--display); font-size: clamp(30px, 5vw, 44px); }
+.gallery-close, .gallery-arrow { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); background: rgba(12, 23, 33, .9); color: var(--paper); cursor: pointer; font-size: 20px; }
+.gallery-close:hover, .gallery-arrow:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
+.gallery-view { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: clamp(8px, 2vw, 20px); margin-top: 18px; }
+.gallery-view figure { min-width: 0; margin: 0; }
+.gallery-view figure img { display: block; width: 100%; max-height: min(62vh, 590px); aspect-ratio: 16 / 9; object-fit: contain; background: #050a0e; }
+.gallery-view figcaption { padding-top: 8px; color: var(--muted); font-size: 10px; text-align: center; }
+.gallery-arrow:disabled { opacity: .45; cursor: default; }
+.gallery-thumbnails { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
+.gallery-thumbnails button { width: clamp(76px, 15vw, 132px); padding: 3px; border: 1px solid var(--line); background: transparent; cursor: pointer; opacity: .62; }
+.gallery-thumbnails button[aria-pressed='true'] { border-color: var(--cyan); opacity: 1; }
+.gallery-thumbnails img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.gallery-count { margin: 10px 0 0; color: #718892; font-size: 9px; text-align: center; }
 .empty-state { display: grid; justify-items: center; padding: 48px 20px 65px; text-align: center; animation: arrive-up .3s ease both; }
 .empty-orbit { display: grid; width: 62px; height: 62px; place-items: center; border: 1px solid rgba(101, 230, 227, .35); border-radius: 50%; box-shadow: 0 0 28px rgba(23, 201, 255, .08); }
 .empty-orbit img { display: block; width: 52px; height: 52px; object-fit: contain; }
@@ -358,6 +379,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
   .category-label { font-size: 7px; }
   .game-card-foot { gap: 4px; }
   .game-tag { font-size: 7px; }
+  .game-card-actions { gap: 4px; }
+  .gallery-link { min-width: 58px; padding-inline: 5px; font-size: 7px; }
   .play-link { min-width: 68px; min-height: 44px; gap: 6px; padding-inline: 7px; font-size: 8px; }
   .about-inner { min-height: 262px; gap: 19px; padding-block: 38px; }
   .about-emblem { width: 55px; height: 55px; }
@@ -397,7 +420,10 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
   .game-description { font-size: 10px; }
   .category-label { font-size: 8px; }
   .game-tag { font-size: 8px; }
+  .gallery-link { min-width: 63px; font-size: 8px; }
   .play-link { min-width: 81px; min-height: 44px; font-size: 9px; }
+  .gallery-view { grid-template-columns: 38px minmax(0, 1fr) 38px; gap: 6px; }
+  .gallery-arrow, .gallery-close { width: 38px; height: 38px; }
   .about-inner { position: relative; gap: 14px; }
   .about-emblem { position: absolute; top: 24px; right: 0; width: 43px; height: 43px; }
   .about-section .eyebrow { max-width: 236px; }

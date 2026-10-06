@@ -7,8 +7,8 @@
   "tags": ["defense", "war", "strategy", "side-scrolling", "base-defense", "flash"],
   "featured": true,
   "launch": "Age-of-War/index.html",
-  "thumbnail": "Age-of-War/age-of-war-cover.png",
+  "thumbnail": "Age-of-War/hub/banner-source.jpg",
   "accent": "#7ab4ff",
-  "bannerSource": "age-of-war-cover.png",
+  "bannerSource": "hub/banner-source.jpg",
   "bannerFit": "cover"
 }

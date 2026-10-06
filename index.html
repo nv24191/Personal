@@ -103,6 +103,22 @@
     </section>
   </main>
 
+  <dialog class="screenshot-gallery" id="screenshot-gallery" aria-labelledby="gallery-title">
+    <div class="gallery-panel">
+      <header class="gallery-header">
+        <div><p class="eyebrow"><span class="eyebrow-line"></span> ORIGINAL GAME SCREENSHOTS</p><h2 id="gallery-title"></h2></div>
+        <button class="gallery-close" id="gallery-close" type="button" aria-label="Close screenshot gallery">×</button>
+      </header>
+      <div class="gallery-view">
+        <button class="gallery-arrow" id="gallery-previous" type="button" aria-label="Previous screenshot">←</button>
+        <figure><img id="gallery-image" alt=""><figcaption id="gallery-caption"></figcaption></figure>
+        <button class="gallery-arrow" id="gallery-next" type="button" aria-label="Next screenshot">→</button>
+      </div>
+      <div class="gallery-thumbnails" id="gallery-thumbnails" role="group" aria-label="Choose a screenshot"></div>
+      <p class="gallery-count" id="gallery-count" aria-live="polite"></p>
+    </div>
+  </dialog>
+
   <footer class="site-footer content-width"><a class="footer-brand" href="#top" aria-label="Octo Industries home"><img src="Octo-Industries/branding/horizontal-logo.png" alt=""></a><span>© Octo Industries Inc. All Rights Reserved.</span><a class="back-to-top" href="#top">BACK TO TOP <span aria-hidden="true">↑</span></a></footer>
 </body>
 </html>

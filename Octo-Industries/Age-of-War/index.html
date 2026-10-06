@@ -56,7 +56,10 @@
     window.addEventListener("load", function () {
       window.RufflePlayer.config = {
         splashScreen: false,
-        contextMenu: "off"
+        contextMenu: "off",
+        quality: "high",
+        frameRate: 60,
+        preferredRenderer: "webgl"
       };
       var ruffle = window.RufflePlayer.newest();
       var player = ruffle.createPlayer();

@@ -29,7 +29,7 @@ function inferGameMetadata(gameDirectory) {
     .trim()
     .replace(/\b[a-z]/gi, (letter) => letter.toUpperCase());
   const id = folderName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const thumbnail = [
+  const thumbnail = discoverScreenshots(gameDirectory)[0] || [
     'logo.svg',
     'logo.png',
     'logo.webp',
@@ -61,6 +61,32 @@ function inferGameMetadata(gameDirectory) {
     launch: 'index.html',
     thumbnail,
   };
+}
+
+function discoverScreenshots(gameDirectory) {
+  const directory = resolve(gameDirectory, 'screenshots');
+  if (!existsSync(directory) || !statSync(directory).isDirectory()) return [];
+
+  return readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(?:avif|gif|jpe?g|png|webp)$/i.test(entry.name))
+    .map((entry) => `screenshots/${entry.name}`)
+    .sort((first, second) => first.localeCompare(second, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function screenshotReferences(gameDirectory, configuredScreenshots) {
+  if (configuredScreenshots !== undefined && !Array.isArray(configuredScreenshots)) {
+    throw new Error(`Screenshots for ${gameDirectory} must be an array of image paths`);
+  }
+  const screenshots = configuredScreenshots ?? discoverScreenshots(gameDirectory);
+  return screenshots.map((value) => {
+    if (typeof value !== 'string') throw new Error(`Invalid screenshot path for ${gameDirectory}: ${value}`);
+    if (!/\.(?:avif|gif|jpe?g|png|webp)$/i.test(value)) {
+      throw new Error(`Unsupported screenshot format for ${gameDirectory}: ${value}`);
+    }
+    const file = resolveGameFile(gameDirectory, value);
+    if (!file) throw new Error(`Screenshot does not exist for ${gameDirectory}: ${value}`);
+    return file;
+  });
 }
 
 function xmlEscape(value) {
@@ -142,6 +168,7 @@ const games = gamesToRegister.map(({ gameDirectory, manifest }) => {
   const {
     bannerSource,
     bannerFit,
+    screenshots: configuredScreenshots,
     ...metadata
   } = game;
 
@@ -149,6 +176,7 @@ const games = gamesToRegister.map(({ gameDirectory, manifest }) => {
     ...metadata,
     launch,
     thumbnail: relative(root, bannerPath).split(sep).map(encodeURIComponent).join('/'),
+    screenshots: screenshotReferences(gameDirectory, configuredScreenshots),
     tags: Array.isArray(game.tags) ? game.tags : [],
     featured: game.featured === true,
   };

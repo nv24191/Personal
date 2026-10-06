@@ -16,7 +16,8 @@ window.OCTO_GAMES = Object.freeze([
     "featured": true,
     "launch": "Octo-Industries/Age-of-War/index.html",
     "thumbnail": "Octo-Industries/Age-of-War/hub-banner.svg",
-    "accent": "#7ab4ff"
+    "accent": "#7ab4ff",
+    "screenshots": []
   },
   {
     "id": "block-blast",
@@ -32,6 +33,7 @@ window.OCTO_GAMES = Object.freeze([
     "launch": "Octo-Industries/Block-Blast/index.html",
     "thumbnail": "Octo-Industries/Block-Blast/hub-banner.svg",
     "accent": "#f6d36b",
+    "screenshots": [],
     "featured": false
   },
   {
@@ -48,7 +50,8 @@ window.OCTO_GAMES = Object.freeze([
     "featured": true,
     "launch": "Octo-Industries/Endless-Siege/index.html",
     "thumbnail": "Octo-Industries/Endless-Siege/hub-banner.svg",
-    "accent": "#9cc77d"
+    "accent": "#9cc77d",
+    "screenshots": []
   },
   {
     "id": "idle-mining-empire",
@@ -65,6 +68,7 @@ window.OCTO_GAMES = Object.freeze([
     "launch": "Octo-Industries/Idle-Mining-Empire/index.html",
     "thumbnail": "Octo-Industries/Idle-Mining-Empire/hub-banner.svg",
     "accent": "#d99b42",
+    "screenshots": [],
     "featured": false
   },
   {
@@ -81,7 +85,31 @@ window.OCTO_GAMES = Object.freeze([
     "featured": true,
     "launch": "Octo-Industries/Ragdoll-Archers/index.html",
     "thumbnail": "Octo-Industries/Ragdoll-Archers/hub-banner.svg",
-    "accent": "#efab72"
+    "accent": "#efab72",
+    "screenshots": []
+  },
+  {
+    "id": "red-ball-4",
+    "title": "Red Ball 4",
+    "description": "Roll, jump, and solve physics puzzles across colorful platforming levels.",
+    "version": "1.08.03",
+    "category": "Platform",
+    "tags": [
+      "platformer",
+      "physics",
+      "puzzle",
+      "adventure"
+    ],
+    "featured": true,
+    "launch": "Octo-Industries/Red-Ball-4/index.html",
+    "thumbnail": "Octo-Industries/Red-Ball-4/hub-banner.svg",
+    "accent": "#ff554c",
+    "screenshots": [
+      "Octo-Industries/Red-Ball-4/screenshots/1.jpg",
+      "Octo-Industries/Red-Ball-4/screenshots/2.jpg",
+      "Octo-Industries/Red-Ball-4/screenshots/3.jpg",
+      "Octo-Industries/Red-Ball-4/screenshots/4.jpg"
+    ]
   },
   {
     "id": "stickman-hook",
@@ -97,6 +125,7 @@ window.OCTO_GAMES = Object.freeze([
     "launch": "Octo-Industries/Stickman-Hook/index.html",
     "thumbnail": "Octo-Industries/Stickman-Hook/hub-banner.svg",
     "accent": "#f3a39a",
+    "screenshots": [],
     "featured": false
   },
   {
@@ -113,6 +142,7 @@ window.OCTO_GAMES = Object.freeze([
     "featured": true,
     "launch": "Octo-Industries/Toss-The-Turtle/index.html",
     "thumbnail": "Octo-Industries/Toss-The-Turtle/hub-banner.svg",
-    "accent": "#9bc8d6"
+    "accent": "#9bc8d6",
+    "screenshots": []
   }
 ]);
