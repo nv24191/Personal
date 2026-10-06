@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: octo-industries-game-hub
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .

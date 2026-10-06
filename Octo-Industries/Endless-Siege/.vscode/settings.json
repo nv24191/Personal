@@ -1,0 +1,17 @@
+{
+    "liveServer.settings.port": 5501,
+    "chat.tools.terminal.autoApprove": {
+        "/^python3 - <<'PY'\nimport re, pathlib\np = pathlib\\.Path\\('/workspaces/Personal/money-games/endless-siege/endless-siege\\.html'\\)\ntext = p\\.read_text\\(encoding='utf-8'\\)\nassert 'if \\(isPortrait\\)' in text\nassert 'document\\.getElementById\\(\"orientation\"\\)\\.style\\.display = \"block\";' in text\nassert 'document\\.getElementById\\(\"content\"\\)\\.style\\.display = \"block\";' in text\nprint\\('orientation logic present in single-file build'\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /workspaces/Personal && node - <<'NODE'\nconst \\{ chromium \\} = require\\('playwright'\\);\n\\(async\\(\\) => \\{\n  const browser = await chromium\\.launch\\(\\{ headless: true \\}\\);\n  const page = await browser\\.newPage\\(\\{ viewport: \\{ width: 1024, height: 768 \\}, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5\\.0 \\(iPad; CPU OS 17_0 like Mac OS X\\) AppleWebKit/605\\.1\\.15 \\(KHTML, like Gecko\\) Version/17\\.0 Mobile/15E148 Safari/604\\.1' \\}\\);\n  await page\\.goto\\('http://127\\.0\\.0\\.1:4173/index\\.html', \\{ waitUntil: 'networkidle' \\}\\);\n  await page\\.waitForTimeout\\(2500\\);\n  const visibility = await page\\.evaluate\\(\\(\\) => \\(\\{\n    orientation: getComputedStyle\\(document\\.getElementById\\('orientation'\\)\\)\\.display,\n    content: getComputedStyle\\(document\\.getElementById\\('content'\\)\\)\\.display,\n    body: document\\.body\\.innerText\\.slice\\(0,200\\),\n    canvas: !!document\\.querySelector\\('canvas'\\)\n  \\}\\)\\);\n  console\\.log\\(JSON\\.stringify\\(visibility, null, 2\\)\\);\n  await browser\\.close\\(\\);\n\\}\\)\\(\\);\nNODE$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^python3 -m http\\.server 4173$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

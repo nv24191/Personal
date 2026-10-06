@@ -1,0 +1,94 @@
+.octo-game-brand,
+.octo-game-watermark {
+  position: fixed;
+  z-index: 2147483647;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.octo-game-brand {
+  display: inline-flex;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: calc(env(safe-area-inset-left, 0px) + 10px);
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 11px 4px 5px;
+  border: 1px solid rgba(245, 243, 247, .18);
+  border-radius: 999px;
+  background: rgba(12, 15, 24, .7);
+  color: #f5f3f7;
+  font: 600 13px/1 Arial, sans-serif;
+  text-decoration: none;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.octo-game-brand:hover {
+  border-color: rgba(242, 139, 135, .7);
+  background: rgba(12, 15, 24, .9);
+}
+
+.octo-game-brand:focus-visible {
+  outline: 2px solid #f28b87;
+  outline-offset: 3px;
+}
+
+.octo-game-brand-mark {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #11131a;
+}
+
+.octo-game-brand-mark img,
+.octo-game-watermark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  mix-blend-mode: normal;
+}
+
+.octo-game-watermark {
+  right: calc(env(safe-area-inset-right, 0px) + 12px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  width: clamp(42px, 5vw, 68px);
+  height: clamp(42px, 5vw, 68px);
+  opacity: .24;
+}
+
+@media (max-width: 480px) {
+  .octo-game-brand {
+    min-height: 38px;
+    gap: 6px;
+    padding: 3px 9px 3px 4px;
+    font-size: 12px;
+  }
+
+  .octo-game-brand-mark {
+    width: 29px;
+    height: 29px;
+  }
+
+  .octo-game-watermark {
+    right: calc(env(safe-area-inset-right, 0px) + 8px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+    width: 46px;
+    height: 46px;
+  }
+}
+
+@media (max-height: 440px) {
+  .octo-game-watermark {
+    width: 40px;
+    height: 40px;
+  }
+}

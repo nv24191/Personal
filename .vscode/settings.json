@@ -1,0 +1,27 @@
+{
+    "liveServer.settings.root": "/",
+    "liveServer.settings.file": "index.html",
+    "liveServer.settings.port": 5501,
+    "chat.tools.terminal.autoApprove": {
+        "/^file '/home/codespace/\\.vscode-remote/data/agentSessionData/86e0fdd3-8032-4f04-a570-411ddfd320cb/attachments/fae48bca-da61-4120-9823-65d6e3405d08/Image from URL\\.png'; command -v magick \\|\\| command -v convert \\|\\| true; git diff --stat && git diff -- Octo-Industries/BehindTheScenes/scripts/sync-games\\.mjs Octo-Industries/BehindTheScenes/package\\.json index\\.html$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^for f in Octo-Industries/\\*/game\\.json; do printf '\\\\n--- %s ---\\\\n' \"\\$f\"; cat \"\\$f\"; done; python3 - <<'PY'\ntry:\n import PIL\n print\\('Pillow', PIL\\.__version__\\)\nexcept ImportError:\n print\\('Pillow unavailable'\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^for f in Octo-Industries/Age-Of-War-1/index\\.html Octo-Industries/Age-Of-War-1/master\\.html Octo-Industries/Age-Of-War-1/standalone\\.html Octo-Industries/Block-Blast/index\\.html Octo-Industries/Endless-Siege/index\\.html Octo-Industries/Ragdoll-Archers/index\\.html Octo-Industries/Stickman-Hook/index\\.html Octo-Industries/Toss-The-Turtle/index\\.html Octo-Industries/BehindTheScenes/HomeScreen-Hub\\.html; do printf '\\\\n--- %s ---\\\\n' \"\\$f\"; sed -n '1,90p' \"\\$f\"; done$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^find Octo-Industries -type f -iname 'index\\.html' -o -iname '\\*hub\\*\\.html' -o -iname 'favicon\\*' -o -iname '\\*\\.webmanifest' \\| sort; printf '\\\\nHub defaults and service manifests:\\\\n'; find Octo-Industries -type f \\\\\\( -path '\\*/hub/\\*' -o -name '\\*\\.webmanifest' \\\\\\) \\| sort; printf '\\\\nAvailable image tools:\\\\n'; for tool in ffmpeg magick convert cwebp vips; do command -v \"\\$tool\" \\|\\| true; done; ls -lh '/home/codespace/\\.vscode-remote/data/agentSessionData/86e0fdd3-8032-4f04-a570-411ddfd320cb/attachments/fae48bca-da61-4120-9823-65d6e3405d08/Image from URL\\.png'$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^mkdir -p Octo-Industries/branding && cp '/home/codespace/\\.vscode-remote/data/agentSessionData/86e0fdd3-8032-4f04-a570-411ddfd320cb/attachments/fae48bca-da61-4120-9823-65d6e3405d08/Image from URL\\.png' Octo-Industries/branding/octo-industries-logo-source\\.jpg && file Octo-Industries/branding/octo-industries-logo-source\\.jpg$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

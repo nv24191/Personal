@@ -1,0 +1,12 @@
+{
+  "id": "age-of-war-1",
+  "title": "Age of War 1",
+  "description": "Lead a civilization through five historical ages. Deploy units, earn resources, and push into the enemy base.",
+  "version": "1.0.0",
+  "category": "Strategy",
+  "tags": ["evolution", "base defense", "war"],
+  "featured": true,
+  "launch": "Age-Of-War-1/index.html",
+  "thumbnail": "Age-Of-War-1/assets/icon.svg",
+  "accent": "#d99562"
+}

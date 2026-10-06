@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <filter id="background-removal" color-interpolation-filters="sRGB">
+      <feColorMatrix values="
+        1 0 0 0 0
+        0 1 0 0 0
+        0 0 1 0 0
+        1.5 1.6 1.2 0 -0.46"/>
+    </filter>
+  </defs>
+  <image href="octo-industries-logo-source.jpg" x="-439" y="-118" width="1380" height="753" preserveAspectRatio="none" filter="url(#background-removal)"/>
+</svg>

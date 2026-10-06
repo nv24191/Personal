@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="176" y1="0" x2="967" y2="760" gradientUnits="userSpaceOnUse"><stop stop-color="#264767"/><stop offset=".58" stop-color="#295870"/><stop offset="1" stop-color="#A75F58"/></linearGradient>
+    <linearGradient id="shell" x1="489" y1="389" x2="745" y2="591" gradientUnits="userSpaceOnUse"><stop stop-color="#A8D58B"/><stop offset="1" stop-color="#488D73"/></linearGradient>
+    <pattern id="grid" width="54" height="54" patternUnits="userSpaceOnUse"><path d="M54 0H0v54" stroke="#D9EFF0" stroke-opacity=".09"/></pattern>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1200v760H0z"/><path fill="url(#grid)" d="M0 0h1200v760H0z"/>
+  <circle cx="931" cy="163" r="84" fill="#F3D087" fill-opacity=".85"/>
+  <path d="M0 581c170-93 296-99 435-21 181 101 329 78 467 4 124-67 196-63 298-7v203H0V581Z" fill="#335A60"/>
+  <path d="M0 653c181-65 326-57 482 8 132 55 248 53 380-7 133-60 227-61 338-15v121H0V653Z" fill="#203F4B"/>
+  <path d="M481 485c4-90 85-149 179-147 87 2 166 53 186 137l57 33c37 22 49 74 23 108-18 24-51 36-80 28l-51-15c-64 54-174 70-258 38-72-28-117-89-119-182Z" fill="url(#shell)" stroke="#E0EACB" stroke-opacity=".62" stroke-width="8"/>
+  <path d="M523 461c18-58 70-92 133-92 58 0 112 29 137 78-35 18-61 49-75 87-64 15-133-5-177-73l-18 0Z" fill="#C4E19B" fill-opacity=".78"/>
+  <path d="M594 392c-16 56 12 120 62 144m40-171c-25 52-13 109 30 151m-133 15c58-6 104 12 136 49" stroke="#477C6B" stroke-width="7" stroke-linecap="round"/>
+  <path d="M471 535c-54-30-96-64-121-112-11-22-38-29-57-14-14 12-17 32-7 48 41 69 95 115 177 145m224 17c-22 32-35 60-43 90-6 25 9 50 34 55 23 5 46-10 51-33 10-41 29-70 56-100m95-50c22 25 49 42 84 55 23 9 50-3 59-27 9-23-3-50-26-60-34-15-57-36-78-63" fill="#7EBC90" stroke="#E0EACB" stroke-opacity=".48" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="790" cy="454" r="10" fill="#F2D47C"/><circle cx="793" cy="451" r="3" fill="#183643"/>
+  <path d="m880 354 82-69m-44 106 126-36M426 322l-74-40m87 84-111 7" stroke="#D9EAE2" stroke-opacity=".55" stroke-width="7" stroke-linecap="round"/>
+  <path d="M112 151h108m-108 14h57M932 618h156m-156 14h73" stroke="#F2E5C5" stroke-opacity=".48" stroke-linecap="round"/>
+  <circle cx="272" cy="393" r="3" fill="#F3D087"/><circle cx="816" cy="151" r="3" fill="#DDF0D7"/>
+</svg>

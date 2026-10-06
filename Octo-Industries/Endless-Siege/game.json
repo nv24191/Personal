@@ -1,0 +1,12 @@
+{
+  "id": "endless-siege",
+  "title": "Endless Siege",
+  "description": "Build a line of defensive towers, upgrade your arsenal, and outlast waves of invading orcs.",
+  "version": "1.0.0",
+  "category": "Strategy",
+  "tags": ["tower defense", "waves", "kingdom"],
+  "featured": true,
+  "launch": "Endless-Siege/index.html",
+  "thumbnail": "Endless-Siege/hub/default.svg",
+  "accent": "#9cc77d"
+}
