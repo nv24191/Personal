@@ -1,0 +1,16 @@
+{
+  "id": "subway-surfers-new-york",
+  "title": "Subway Surfers: New York",
+  "description": "Run through the New York subway, dodge trains, collect coins, and escape the inspector.",
+  "category": "Runner",
+  "tags": ["subway surfers", "endless runner", "3d", "running"],
+  "featured": false,
+  "launch": "Subway-Surfers/index.html",
+  "thumbnail": "hub/banner-source.png",
+  "accent": "#ffb3d0",
+  "bannerSource": "hub/banner-source.png",
+  "bannerFit": "cover",
+  "screenshots": [
+    "screenshots/title-screen.png"
+  ]
+}

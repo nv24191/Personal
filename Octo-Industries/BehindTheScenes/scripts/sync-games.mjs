@@ -163,8 +163,10 @@ const games = gamesToRegister.map(({ gameDirectory, manifest }) => {
   const launch = resolveGameFile(gameDirectory, game.launch);
   if (!launch) throw new Error(`${game.title} has no valid launch file: ${game.launch}`);
 
-  const bannerPath = resolve(gameDirectory, 'hub-banner.svg');
-  writeFileSync(bannerPath, bannerSvg(game, gameDirectory));
+  const bannerPath = game.bannerSource || game.thumbnail
+    ? resolve(gameDirectory, 'hub-banner.svg')
+    : null;
+  if (bannerPath) writeFileSync(bannerPath, bannerSvg(game, gameDirectory));
   const {
     bannerSource,
     bannerFit,
@@ -175,7 +177,9 @@ const games = gamesToRegister.map(({ gameDirectory, manifest }) => {
   return {
     ...metadata,
     launch,
-    thumbnail: relative(root, bannerPath).split(sep).map(encodeURIComponent).join('/'),
+    thumbnail: bannerPath
+      ? relative(root, bannerPath).split(sep).map(encodeURIComponent).join('/')
+      : '',
     screenshots: screenshotReferences(gameDirectory, configuredScreenshots),
     tags: Array.isArray(game.tags) ? game.tags : [],
     featured: game.featured === true,

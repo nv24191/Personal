@@ -1,0 +1,11 @@
+{
+  "id": "tiny-fishing",
+  "title": "Tiny Fishing",
+  "description": "Cast your line, catch fish, and upgrade your gear. The game loads from its live online host.",
+  "category": "Arcade",
+  "tags": ["fishing", "casual", "idle"],
+  "launch": "index.html",
+  "thumbnail": "hub-banner-source.png",
+  "bannerSource": "hub-banner-source.png",
+  "bannerFit": "contain"
+}

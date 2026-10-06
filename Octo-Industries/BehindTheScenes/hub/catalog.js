@@ -129,6 +129,40 @@ window.OCTO_GAMES = Object.freeze([
     "featured": false
   },
   {
+    "id": "subway-surfers-new-york",
+    "title": "Subway Surfers: New York",
+    "description": "Run through the New York subway, dodge trains, collect coins, and escape the inspector.",
+    "category": "Runner",
+    "tags": [
+      "subway surfers",
+      "endless runner",
+      "3d",
+      "running"
+    ],
+    "featured": false,
+    "launch": "Octo-Industries/Subway-Surfers/index.html",
+    "thumbnail": "Octo-Industries/Subway-Surfers/hub-banner.svg",
+    "accent": "#ffb3d0",
+    "screenshots": [
+      "Octo-Industries/Subway-Surfers/screenshots/title-screen.png"
+    ]
+  },
+  {
+    "id": "tiny-fishing",
+    "title": "Tiny Fishing",
+    "description": "Cast your line, catch fish, and upgrade your gear. The game loads from its live online host.",
+    "category": "Arcade",
+    "tags": [
+      "fishing",
+      "casual",
+      "idle"
+    ],
+    "launch": "Octo-Industries/Tiny-Fishing/index.html",
+    "thumbnail": "Octo-Industries/Tiny-Fishing/hub-banner.svg",
+    "screenshots": [],
+    "featured": false
+  },
+  {
     "id": "toss-the-turtle",
     "title": "Toss The Turtle",
     "description": "Launch, bounce, and fly farther on each attempt in a physics-driven arcade challenge.",
