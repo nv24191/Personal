@@ -2,5 +2,5 @@ services:
   - type: web
     name: octo-industries-game-hub
     runtime: static
-    buildCommand: ""
+    buildCommand: npm --prefix Octo-Industries/BehindTheScenes run sync
     staticPublishPath: .

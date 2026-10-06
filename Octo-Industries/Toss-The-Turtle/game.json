@@ -7,6 +7,8 @@
   "tags": ["physics", "launch", "score attack"],
   "featured": true,
   "launch": "Toss-The-Turtle/index.html",
-  "thumbnail": "hub/default.svg",
-  "accent": "#9bc8d6"
+  "thumbnail": "hub/banner-source.png",
+  "accent": "#9bc8d6",
+  "bannerSource": "hub/banner-source.png",
+  "bannerFit": "cover"
 }

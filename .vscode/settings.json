@@ -11,7 +11,7 @@
             "approve": true,
             "matchCommandLine": true
         },
-        "/^for f in Octo-Industries/Age-Of-War-1/index\\.html Octo-Industries/Age-Of-War-1/master\\.html Octo-Industries/Age-Of-War-1/standalone\\.html Octo-Industries/Block-Blast/index\\.html Octo-Industries/Endless-Siege/index\\.html Octo-Industries/Ragdoll-Archers/index\\.html Octo-Industries/Stickman-Hook/index\\.html Octo-Industries/Toss-The-Turtle/index\\.html Octo-Industries/BehindTheScenes/HomeScreen-Hub\\.html; do printf '\\\\n--- %s ---\\\\n' \"\\$f\"; sed -n '1,90p' \"\\$f\"; done$/": {
+        "/^for f in Octo-Industries/Block-Blast/index\\.html Octo-Industries/Endless-Siege/index\\.html Octo-Industries/Ragdoll-Archers/index\\.html Octo-Industries/Stickman-Hook/index\\.html Octo-Industries/Toss-The-Turtle/index\\.html Octo-Industries/BehindTheScenes/HomeScreen-Hub\\.html; do printf '\\\\n--- %s ---\\\\n' \"\\$f\"; sed -n '1,90p' \"\\$f\"; done$/": {
             "approve": true,
             "matchCommandLine": true
         },

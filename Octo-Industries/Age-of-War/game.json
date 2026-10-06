@@ -1,0 +1,14 @@
+{
+  "id": "age-of-war",
+  "title": "Age of War",
+  "description": "Command your civilization through multiple eras in a fast-paced base-defense battle against an opposing army.",
+  "version": "1.0.0",
+  "category": "Strategy",
+  "tags": ["defense", "war", "strategy", "side-scrolling", "base-defense", "flash"],
+  "featured": true,
+  "launch": "Age-of-War/index.html",
+  "thumbnail": "Age-of-War/age-of-war-cover.png",
+  "accent": "#7ab4ff",
+  "bannerSource": "age-of-war-cover.png",
+  "bannerFit": "cover"
+}

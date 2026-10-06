@@ -1,4 +1,11 @@
 (() => {
+  const defaultSettings = {
+    hubButtonPosition: 'top-left',
+    watermarkPosition: 'bottom-right',
+  };
+  const settings = window.OCTO_GAME_BRANDING_CONFIG || defaultSettings;
+  window.OCTO_GAME_BRANDING_CONFIG = settings;
+
   const scriptElement = document.currentScript || Array.from(document.querySelectorAll('script')).find((element) =>
     /game-branding\.js(?:\?|$)/.test(element.src || '')
   );
@@ -14,7 +21,20 @@
   const storageKey = 'octo-industries.game-home-corner';
   const corners = new Set(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
 
-  let corner = 'top-left';
+  function readPosition(value, fallback, settingName) {
+    if (corners.has(value)) {
+      return value;
+    }
+
+    if (value !== undefined) {
+      console.warn(`Invalid Octo Industries ${settingName} setting; using ${fallback}.`);
+    }
+    return fallback;
+  }
+
+  const defaultHomeCorner = readPosition(settings.hubButtonPosition, defaultSettings.hubButtonPosition, 'hubButtonPosition');
+  const watermarkCorner = readPosition(settings.watermarkPosition, defaultSettings.watermarkPosition, 'watermarkPosition');
+  let corner = defaultHomeCorner;
   try {
     const savedCorner = localStorage.getItem(storageKey);
     if (corners.has(savedCorner)) {
@@ -25,6 +45,7 @@
   }
 
   document.body.dataset.octoHomeCorner = corner;
+  document.body.dataset.octoWatermarkCorner = watermarkCorner;
 
   const badge = document.createElement('a');
   badge.className = 'octo-game-brand';

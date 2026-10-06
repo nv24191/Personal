@@ -7,5 +7,7 @@
   "tags": ["blocks", "brain teaser", "high score"],
   "launch": "Block-Blast/index.html",
   "thumbnail": "Block-Blast/TemplateData/favicon.ico",
-  "accent": "#f6d36b"
+  "accent": "#f6d36b",
+  "bannerSource": "TemplateData/favicon.ico",
+  "bannerFit": "contain"
 }

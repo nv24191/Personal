@@ -19,26 +19,26 @@ Open `http://localhost:8080/`. Run the server from the repository root, not from
 
 ## Discover and add games
 
-`npm --prefix Octo-Industries/BehindTheScenes run sync` recursively finds `game.json` files, checks their launch paths, and regenerates `Octo-Industries/BehindTheScenes/hub/catalog.js`. Game metadata supplies its title, description, category, tags, thumbnail, launch path, and optional featured status. Search indexes those fields. Missing thumbnail files are allowed; invalid launch paths stop the sync with an error.
+`npm --prefix Octo-Industries/BehindTheScenes run sync` reads `game.json` metadata when available and automatically detects top-level game folders with an `index.html`. It validates launch paths and regenerates `Octo-Industries/BehindTheScenes/hub/catalog.js`. Manifest metadata supplies its title, description, category, tags, thumbnail, launch path, and optional featured status. Missing thumbnail files are allowed; invalid launch paths stop the sync with an error.
 
-Add a game directory and `game.json` with at least `id`, `title`, `description`, `category`, and `launch`. Paths can be relative to the game directory, its parent game collection, or the repository root. Add `thumbnail`, `tags`, and `"featured": true` as needed, then run `npm --prefix Octo-Industries/BehindTheScenes run sync`.
+Add a game directory directly beneath `Octo-Industries/` with an `index.html`; the catalog sync automatically creates a title from the directory name, an `Other` category, basic tags, and a description. It looks for original promotional artwork named `logo`, `cover`, `title`, or `icon` (SVG, PNG, WebP, JPEG) and places it edge-to-edge in the shared 16:9 banner. It does not add generated titles or descriptions to the artwork and does not use gameplay screenshots. Add `game.json` with a curated `bannerSource` when artwork uses a different name; `bannerFit: "contain"` preserves transparent logo artwork, while the default cover fit fills the banner. The generated `hub-banner.svg` embeds its source art, so it loads offline at a consistent aspect ratio. The sync runs locally with `npm --prefix Octo-Industries/BehindTheScenes run sync` and automatically during Render deployment.
 
 ## Game projects
 
-- `Octo-Industries/Age-Of-War-1/` — locally playable HTML5 strategy game; editable source is in `src/`.
 - `Octo-Industries/Block-Blast/` — Unity WebGL puzzle game.
 - `Octo-Industries/Endless-Siege/` — HTML5 tower defense game.
+- `Octo-Industries/Idle-Mining-Empire/` — locally hosted original HTML5 idle-mining game.
 - `Octo-Industries/Ragdoll-Archers/` — Unity WebGL archery game.
 - `Octo-Industries/Stickman-Hook/` — browser-based swinging platform game.
 - `Octo-Industries/Toss-The-Turtle/` — Flash game launched locally by the bundled Ruffle player.
 
-The existing `Octo-Industries/BehindTheScenes/` folder contains the hub, scripts, and project configuration alongside the game folders. Game ZIP archives are kept together in `Zips/`, with one archive per game. `Zips/BehindTheScenes.zip` is the complete source snapshot: it includes the hub, game projects, scripts, documentation, and project configuration, but excludes Git history and ZIP archives. The playable project folders above are the current copies used by the hub.
+The existing `Octo-Industries/BehindTheScenes/` folder contains the hub, scripts, and project configuration alongside the game folders. The playable project folders above are the current copies used by the hub.
 
-Every Play link opens that project's `game.json` launch page as a regular static route. The hub stores recently played game IDs in local browser storage; it does not require an account or send play history to a server.
+Every Play link opens the launch path from the generated catalog as a regular static route. The hub stores recently played game IDs in local browser storage; it does not require an account or send play history to a server.
 
 ## Hosting
 
-The root `render.yaml` configures a Render Static Site to publish the repository root (`.`), where `index.html` lives. This is a static site and does not need a build command; the generated `Octo-Industries/BehindTheScenes/hub/catalog.js` is served with the rest of the source. Connect the repository to Render and use the Blueprint to apply these settings. Keep `index.html`, `Octo-Industries/`, and `render.yaml` together in the deployed branch.
+The root `render.yaml` configures a Render Static Site to run the catalog sync and publish the repository root (`.`), where `index.html` lives. The build has no package dependencies; it uses Node.js to refresh `Octo-Industries/BehindTheScenes/hub/catalog.js` before the static files are published. Connect the repository to Render and use the Blueprint to apply these settings. Keep `index.html`, `Octo-Industries/`, and `render.yaml` together in the deployed branch.
 
 Run `npm --prefix Octo-Industries/BehindTheScenes run sync` after changing game metadata or adding a game, and commit the generated `Octo-Industries/BehindTheScenes/hub/catalog.js` with the static site. The sync script validates game launch paths before writing the catalog.
 
@@ -53,7 +53,7 @@ The existing artwork in `Octo-Industries/branding/octo-industries-logo-source.jp
 - `watermark-logo.svg` / `.png` — transparent, text-free watermark artwork.
 - `favicon.svg`, `favicon.png`, and `favicon.ico` — browser and app icon sizes, including `apple-touch-icon.png`.
 
-Game pages use the circular home button, linking back to the hub, and a non-interactive icon-only watermark at 15% opacity. Drag the home button to any corner; its position is saved and shared between games. Keyboard users can focus the button and use the arrow keys to change corners. The watermark moves to the opposite bottom corner if needed to avoid overlap. The shared overlay is maintained by `game-branding.css` and `game-branding.js`. Keep the branding directory with the game projects when hosting or packaging the site.
+Game pages use the circular home button, linking back to the hub, and a non-interactive icon-only watermark at 15% opacity. The shared corner defaults are configured in `game-branding.js` through `window.OCTO_GAME_BRANDING_CONFIG` (`hubButtonPosition` and `watermarkPosition`); changing them updates every game that loads the shared overlay. Players can still drag the home button to any corner; that personal preference is saved and shared between games. Keyboard users can focus the button and use the arrow keys to change corners. The shared overlay is maintained by `game-branding.css` and `game-branding.js`. Keep the branding directory with the game projects when hosting or packaging the site.
 
 | Logo variant | Preview |
 | --- | --- |

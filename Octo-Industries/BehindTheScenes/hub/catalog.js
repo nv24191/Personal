@@ -1,19 +1,22 @@
 window.OCTO_GAMES = Object.freeze([
   {
-    "id": "age-of-war-1",
-    "title": "Age of War 1",
-    "description": "Lead a civilization through five historical ages. Deploy units, earn resources, and push into the enemy base.",
+    "id": "age-of-war",
+    "title": "Age of War",
+    "description": "Command your civilization through multiple eras in a fast-paced base-defense battle against an opposing army.",
     "version": "1.0.0",
     "category": "Strategy",
     "tags": [
-      "evolution",
-      "base defense",
-      "war"
+      "defense",
+      "war",
+      "strategy",
+      "side-scrolling",
+      "base-defense",
+      "flash"
     ],
     "featured": true,
-    "launch": "Octo-Industries/Age-Of-War-1/index.html",
-    "thumbnail": "Octo-Industries/Age-Of-War-1/assets/icon.svg",
-    "accent": "#d99562"
+    "launch": "Octo-Industries/Age-of-War/index.html",
+    "thumbnail": "Octo-Industries/Age-of-War/hub-banner.svg",
+    "accent": "#7ab4ff"
   },
   {
     "id": "block-blast",
@@ -27,7 +30,7 @@ window.OCTO_GAMES = Object.freeze([
       "high score"
     ],
     "launch": "Octo-Industries/Block-Blast/index.html",
-    "thumbnail": "Octo-Industries/Block-Blast/TemplateData/favicon.ico",
+    "thumbnail": "Octo-Industries/Block-Blast/hub-banner.svg",
     "accent": "#f6d36b",
     "featured": false
   },
@@ -44,8 +47,25 @@ window.OCTO_GAMES = Object.freeze([
     ],
     "featured": true,
     "launch": "Octo-Industries/Endless-Siege/index.html",
-    "thumbnail": "Octo-Industries/Endless-Siege/hub/default.svg",
+    "thumbnail": "Octo-Industries/Endless-Siege/hub-banner.svg",
     "accent": "#9cc77d"
+  },
+  {
+    "id": "idle-mining-empire",
+    "title": "Idle Mining Empire",
+    "description": "Build a mineral mining business by managing mineshafts, workers, elevators, and upgrades.",
+    "version": "1.0.0",
+    "category": "Idle",
+    "tags": [
+      "clicker",
+      "mining",
+      "tycoon",
+      "management"
+    ],
+    "launch": "Octo-Industries/Idle-Mining-Empire/index.html",
+    "thumbnail": "Octo-Industries/Idle-Mining-Empire/hub-banner.svg",
+    "accent": "#d99b42",
+    "featured": false
   },
   {
     "id": "ragdoll-archers",
@@ -60,7 +80,7 @@ window.OCTO_GAMES = Object.freeze([
     ],
     "featured": true,
     "launch": "Octo-Industries/Ragdoll-Archers/index.html",
-    "thumbnail": "Octo-Industries/Ragdoll-Archers/logo.jpeg",
+    "thumbnail": "Octo-Industries/Ragdoll-Archers/hub-banner.svg",
     "accent": "#efab72"
   },
   {
@@ -75,7 +95,7 @@ window.OCTO_GAMES = Object.freeze([
       "timing"
     ],
     "launch": "Octo-Industries/Stickman-Hook/index.html",
-    "thumbnail": "Octo-Industries/Stickman-Hook/images/761ec028d03babc2072c1bb078017f4f-CHAR_Classic.png",
+    "thumbnail": "Octo-Industries/Stickman-Hook/hub-banner.svg",
     "accent": "#f3a39a",
     "featured": false
   },
@@ -92,7 +112,7 @@ window.OCTO_GAMES = Object.freeze([
     ],
     "featured": true,
     "launch": "Octo-Industries/Toss-The-Turtle/index.html",
-    "thumbnail": "Octo-Industries/Toss-The-Turtle/hub/default.svg",
+    "thumbnail": "Octo-Industries/Toss-The-Turtle/hub-banner.svg",
     "accent": "#9bc8d6"
   }
 ]);

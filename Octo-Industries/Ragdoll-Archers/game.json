@@ -8,5 +8,7 @@
   "featured": true,
   "launch": "Ragdoll-Archers/index.html",
   "thumbnail": "Ragdoll-Archers/logo.jpeg",
-  "accent": "#efab72"
+  "accent": "#efab72",
+  "bannerSource": "logo.jpeg",
+  "bannerFit": "cover"
 }

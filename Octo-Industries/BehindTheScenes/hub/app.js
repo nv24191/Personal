@@ -57,7 +57,7 @@ function gameCard(game, index) {
   return `
     <article class="game-card" style="animation-delay:${Math.min(index * 45, 225)}ms" data-game-id="${escapeHtml(game.id)}">
       <a class="game-art" data-category="${escapeHtml(game.category)}" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}" aria-label="Play ${escapeHtml(game.title)}">
-        ${hasThumbnail ? imageMarkup(game, 'game-image', game.category === 'Puzzle') : `<span class="art-index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>`}
+        ${hasThumbnail ? imageMarkup(game, 'game-image') : `<span class="art-index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>`}
         <span class="art-live"><i></i> READY TO PLAY</span><span class="art-category">${escapeHtml(game.category.toUpperCase())}</span>
       </a>
       <div class="game-card-copy">
@@ -103,8 +103,7 @@ function renderFeatured() {
   if (!slides.length) return;
   const game = slides[slideIndex];
   const featureArt = document.querySelector('#featured-art');
-  const contain = game.category === 'Puzzle' || game.category === 'Action';
-  featureArt.innerHTML = `${game.thumbnail ? imageMarkup(game, 'featured-image', contain) : '<span class="feature-orbit"></span><span class="feature-spark"></span>'}`;
+  featureArt.innerHTML = `${game.thumbnail ? imageMarkup(game, 'featured-image') : '<span class="feature-orbit"></span><span class="feature-spark"></span>'}`;
   featureArt.dataset.category = game.category;
   document.querySelector('#featured-title').textContent = game.title;
   document.querySelector('#featured-description').textContent = game.description;

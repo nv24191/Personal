@@ -7,6 +7,8 @@
   "tags": ["tower defense", "waves", "kingdom"],
   "featured": true,
   "launch": "Endless-Siege/index.html",
-  "thumbnail": "Endless-Siege/hub/default.svg",
-  "accent": "#9cc77d"
+  "thumbnail": "hub/banner-source.png",
+  "accent": "#9cc77d",
+  "bannerSource": "hub/banner-source.png",
+  "bannerFit": "cover"
 }
