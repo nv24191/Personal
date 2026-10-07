@@ -740,8 +740,8 @@ async function handleRequest(request, response) {
         recentActivity: state.activity.slice(0, 10),
       };
       let providerResponse;
+      const model = process.env.OCTO_GEMINI_MODEL || 'gemini-2.5-flash';
       try {
-        const model = process.env.OCTO_GEMINI_MODEL || 'gemini-2.5-flash';
         providerResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: 'POST',
           headers: {
@@ -768,13 +768,22 @@ async function handleRequest(request, response) {
         return;
       }
       if (!providerResponse.ok) {
-        console.error(`Gemini chat request returned HTTP ${providerResponse.status}.`);
+        let providerError = '';
+        try {
+          const errorBody = await providerResponse.json();
+          providerError = typeof errorBody.error?.message === 'string' ? errorBody.error.message.slice(0, 300) : '';
+        } catch {
+          providerError = 'The provider did not return a readable error message.';
+        }
+        console.error(`Gemini model ${model} returned HTTP ${providerResponse.status}: ${providerError}`);
         if (providerResponse.status === 401 || providerResponse.status === 403) {
           sendJson(response, 502, { error: 'Google Gemini rejected the configured API key. Check the GEMINI_API_KEY Render secret and enable the model for that key.' });
         } else if (providerResponse.status === 429) {
           sendJson(response, 503, { error: 'The Gemini free-tier quota or rate limit was reached. Check Google AI Studio for the project limits and try again after they reset.' });
+        } else if (providerResponse.status === 404) {
+          sendJson(response, 502, { error: `Google could not find Gemini model "${model}" for this request. In Render, check the OCTO_GEMINI_MODEL variable is exactly gemini-2.5-flash. ${providerError}` });
         } else {
-          sendJson(response, 502, { error: `Google Gemini could not complete the chat request (HTTP ${providerResponse.status}).` });
+          sendJson(response, 502, { error: `Google Gemini could not complete the chat request (HTTP ${providerResponse.status}). ${providerError}` });
         }
         return;
       }

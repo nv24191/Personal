@@ -47,11 +47,11 @@
 
       <section class="panel agent-panel" aria-labelledby="agent-title">
         <div class="section-heading"><div><p class="eyebrow">OCTO GAME INSPECTOR</p><h2 id="agent-title">Inspect a game page</h2></div><span class="mode-badge">Source scan</span></div>
-        <p class="muted">External page scanning is disabled on the Cloudflare free deployment. Use a game’s Health check to verify its published launch file and metadata; this is not a gameplay or offline test.</p>
+        <p class="muted">Inspect only a game page you are authorized to access. This bounded source scan lists page resources; it does not download or alter game files, or test gameplay or offline behavior.</p>
         <form class="url-form" id="analyze-form">
           <label class="visually-hidden" for="game-url">Authorized game page URL</label>
-          <input id="game-url" type="url" placeholder="Unavailable on this deployment" autocomplete="url" disabled>
-          <button class="button button-primary" type="submit" disabled>Analyze page</button>
+          <input id="game-url" type="url" placeholder="https://example.com/game" autocomplete="url" required>
+          <button class="button button-primary" type="submit">Analyze page</button>
         </form>
         <p class="notice" id="agent-message" role="status" hidden></p>
       </section>
