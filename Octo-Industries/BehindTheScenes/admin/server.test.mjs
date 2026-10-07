@@ -6,7 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes, scryptSync } from 'node:crypto';
+import { randomBytes, pbkdf2Sync } from 'node:crypto';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const root = resolve(project, '../..');
@@ -53,7 +53,7 @@ test('admin service protects and manages the canonical library', async (t) => {
   const dataDirectory = await mkdtemp(resolve(tmpdir(), 'octo-admin-test-'));
   const password = `Test-${randomBytes(12).toString('hex')}`;
   const salt = randomBytes(16).toString('hex');
-  const digest = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 }).toString('hex');
+  const digest = pbkdf2Sync(password, salt, 120000, 64, 'sha512').toString('hex');
   const child = spawn(process.execPath, [resolve(project, 'admin/server.mjs')], {
     cwd: root,
     env: {
@@ -61,7 +61,7 @@ test('admin service protects and manages the canonical library', async (t) => {
       NODE_ENV: 'test',
       PORT: String(port),
       OCTO_DATA_DIR: dataDirectory,
-      OCTO_ADMIN_PASSWORD_HASH: `scrypt$${salt}$${digest}`,
+      OCTO_ADMIN_PASSWORD_HASH: `pbkdf2$120000$${salt}$${digest}`,
       GEMINI_API_KEY: '',
     },
     stdio: 'ignore',

@@ -31,6 +31,24 @@ async function api(path, options = {}) {
   return body;
 }
 
+async function createLoginProof(password, challenge) {
+  if (!Number.isInteger(challenge.iterations) || challenge.iterations < 10000 || challenge.iterations > 500000
+    || !/^[a-f\d]{32}$/.test(challenge.salt)) {
+    throw new Error('The server returned invalid password-verification settings.');
+  }
+  const encoder = new TextEncoder();
+  const material = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const verifier = await crypto.subtle.deriveBits({
+    name: 'PBKDF2',
+    hash: 'SHA-512',
+    salt: encoder.encode(challenge.salt),
+    iterations: challenge.iterations,
+  }, material, 512);
+  const proofKey = await crypto.subtle.importKey('raw', verifier, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const proof = await crypto.subtle.sign('HMAC', proofKey, encoder.encode(`${challenge.challengeId}\n${challenge.nonce}`));
+  return [...new Uint8Array(proof)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 function showMessage(element, message) {
   element.textContent = message;
   element.hidden = !message;
@@ -142,9 +160,16 @@ loginForm.addEventListener('submit', async (event) => {
   showMessage(loginMessage, '');
   try {
     const password = document.querySelector('#password').value;
-    const result = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password }) });
+    const challenge = await api('/api/admin/login/challenge', { method: 'POST', body: '{}' });
+    showMessage(loginMessage, 'Verifying password securely…');
+    const proof = await createLoginProof(password, challenge);
+    const result = await api('/api/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ challengeId: challenge.challengeId, proof }),
+    });
     csrfToken = result.csrfToken;
     document.querySelector('#password').value = '';
+    showMessage(loginMessage, '');
     showDashboard();
     await refreshDashboard();
   } catch (error) {

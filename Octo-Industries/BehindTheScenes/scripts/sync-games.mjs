@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const gameCollection = resolve(root, 'Octo-Industries');
-const excludedDirectories = new Set(['.git', '.vscode', 'node_modules', 'dist']);
+const excludedDirectories = new Set(['.cloudflare-dist', '.git', '.octo-data', '.vscode', 'node_modules', 'dist']);
 const gamesToRegister = [];
 
 function walk(directory) {

@@ -1,0 +1,8 @@
+{
+  "name": "octo-industries-cloudflare-pages",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pages:build": "node scripts/build-cloudflare-site.mjs"
+  }
+}

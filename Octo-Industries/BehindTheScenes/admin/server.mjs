@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { promises as fs } from 'node:fs';
-import { scrypt, timingSafeEqual, randomBytes, createHash } from 'node:crypto';
+import { scrypt, pbkdf2, timingSafeEqual, randomBytes, createHash } from 'node:crypto';
 import { promisify } from 'node:util';
 import { dirname, extname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 
 const scryptAsync = promisify(scrypt);
+const pbkdf2Async = promisify(pbkdf2);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const project = resolve(root, 'Octo-Industries/BehindTheScenes');
 const dataDirectory = resolve(process.env.OCTO_DATA_DIR || resolve(root, '.octo-data'));
@@ -37,7 +38,11 @@ let state;
 
 function validPasswordHash(value) {
   const [, salt, digest] = /^scrypt\$([a-f\d]{32})\$([a-f\d]{128})$/.exec(value || '') || [];
-  return salt && digest ? { salt, digest: Buffer.from(digest, 'hex') } : null;
+  if (salt && digest) return { algorithm: 'scrypt', salt, digest: Buffer.from(digest, 'hex') };
+  const [, rawIterations, pbkdfSalt, pbkdfDigest] = /^pbkdf2\$(\d{5,7})\$([a-f\d]{32})\$([a-f\d]{128})$/.exec(value || '') || [];
+  return pbkdfSalt && pbkdfDigest
+    ? { algorithm: 'pbkdf2', iterations: Number(rawIterations), salt: pbkdfSalt, digest: Buffer.from(pbkdfDigest, 'hex') }
+    : null;
 }
 
 function publicGame(game) {
@@ -517,7 +522,9 @@ async function handleRequest(request, response) {
     passwordChecksInFlight += 1;
     let given;
     try {
-      given = await scryptAsync(password, configured?.salt || 'octo-admin-not-configured', 64, { N: 16384, r: 8, p: 1 });
+      given = configured?.algorithm === 'pbkdf2'
+        ? await pbkdf2Async(password, configured.salt, configured.iterations, 64, 'sha512')
+        : await scryptAsync(password, configured?.salt || 'octo-admin-not-configured', 64, { N: 16384, r: 8, p: 1 });
     } finally {
       passwordChecksInFlight -= 1;
     }
@@ -630,7 +637,7 @@ async function handleRequest(request, response) {
       };
       let providerResponse;
       try {
-        const model = process.env.OCTO_GEMINI_MODEL || 'gemini-2.5-pro';
+        const model = process.env.OCTO_GEMINI_MODEL || 'gemini-2.5-flash';
         providerResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: 'POST',
           headers: {

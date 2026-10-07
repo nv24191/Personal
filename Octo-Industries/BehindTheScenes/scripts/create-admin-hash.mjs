@@ -1,4 +1,4 @@
-import { scryptSync, randomBytes } from 'node:crypto';
+import { pbkdf2Sync, randomBytes } from 'node:crypto';
 import { stdin, stdout } from 'node:process';
 
 function readHiddenPassword() {
@@ -44,8 +44,9 @@ try {
   const password = await readHiddenPassword();
   if (password.length < 12) throw new Error('The admin password must be at least 12 characters.');
   const salt = randomBytes(16).toString('hex');
-  const hash = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 }).toString('hex');
-  console.log(`OCTO_ADMIN_PASSWORD_HASH=scrypt$${salt}$${hash}`);
+  const iterations = 120000;
+  const hash = pbkdf2Sync(password, salt, iterations, 64, 'sha512').toString('hex');
+  console.log(`OCTO_ADMIN_PASSWORD_HASH=pbkdf2$${iterations}$${salt}$${hash}`);
 } finally {
   if (stdin.isTTY && typeof stdin.setRawMode === 'function') stdin.setRawMode(false);
 }
