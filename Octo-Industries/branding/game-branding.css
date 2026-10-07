@@ -1,5 +1,6 @@
 .octo-game-brand,
 .octo-game-watermark {
+  box-sizing: border-box;
   position: fixed;
   z-index: 2147483647;
   display: block;

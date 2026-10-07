@@ -72,6 +72,31 @@ window.OCTO_GAMES = Object.freeze([
     "featured": false
   },
   {
+    "id": "miragine-war",
+    "title": "Miragine War",
+    "description": "Pick the right units and skills to counter the enemy in a side-scrolling war between Red and Blue, in single-player or two-player battles.",
+    "version": "1.0.0",
+    "category": "Strategy",
+    "tags": [
+      "war",
+      "strategy",
+      "2 players",
+      "units",
+      "flash"
+    ],
+    "launch": "Octo-Industries/Miragine-War/index.html",
+    "thumbnail": "Octo-Industries/Miragine-War/hub-banner.svg",
+    "accent": "#e8a33a",
+    "screenshots": [
+      "Octo-Industries/Miragine-War/screenshots/01-battle.png",
+      "Octo-Industries/Miragine-War/screenshots/02-main-menu.png",
+      "Octo-Industries/Miragine-War/screenshots/03-difficulty-select.png",
+      "Octo-Industries/Miragine-War/screenshots/04-how-to-play.png",
+      "Octo-Industries/Miragine-War/screenshots/05-skirmish.png"
+    ],
+    "featured": false
+  },
+  {
     "id": "ragdoll-archers",
     "title": "Ragdoll Archers",
     "description": "Aim, draw, and fire in physics-driven duels as ragdoll archers battle for the last shot.",

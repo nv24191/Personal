@@ -11,6 +11,9 @@
   <link rel="icon" href="../branding/favicon.ico">
   <link rel="stylesheet" href="../branding/game-branding.css">
   <script defer src="../branding/game-branding.js"></script>
+  <link rel="stylesheet" href="../branding/game-loader.css">
+  <script src="../branding/game-loader.js"></script>
+  <style>#unity-loading-bar,#loading-cover,#loading-screen{display:none!important}</style>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -50,19 +53,19 @@
       message.textContent = text;
       message.hidden = false;
       loadingScreen.hidden = true;
+      octoLoader.finish();
     }
 
+    const octoLoader = OctoLoader.show();
     const loader = document.createElement('script');
     loader.src = `${buildUrl}/10803.loader.js`;
     loader.onload = () => {
       createUnityInstance(canvas, config, (progress) => {
-        const percent = Math.round(progress * 100);
-        progressFill.style.width = `${percent}%`;
-        loadingStatus.textContent = `Loading original game files… ${percent}%`;
+        octoLoader.progress(progress * 100);
       }).then((unityInstance) => {
         window.unityInstance = unityInstance;
         window.pokiBridgeReady();
-        loadingScreen.hidden = true;
+        octoLoader.finish();
       }).catch((error) => {
         console.error('Red Ball 4 failed to initialize.', error);
         showMessage('Red Ball 4 could not start. Check that the local game files are being served over HTTP.');

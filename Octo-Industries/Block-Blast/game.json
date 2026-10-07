@@ -6,8 +6,8 @@
   "category": "Puzzle",
   "tags": ["blocks", "brain teaser", "high score"],
   "launch": "Block-Blast/index.html",
-  "thumbnail": "Block-Blast/TemplateData/favicon.ico",
+  "thumbnail": "Block-Blast/hub/banner-source.png",
   "accent": "#f6d36b",
-  "bannerSource": "TemplateData/favicon.ico",
-  "bannerFit": "contain"
+  "bannerSource": "hub/banner-source.png",
+  "bannerFit": "cover"
 }

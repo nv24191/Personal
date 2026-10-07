@@ -22,7 +22,7 @@
   const corners = new Set(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
 
   function readPosition(value, fallback, settingName) {
-    if (corners.has(value)) {
+    if (corners.has(value) || (settingName === 'watermarkPosition' && value === 'none')) {
       return value;
     }
 
@@ -173,5 +173,8 @@
   watermark.draggable = false;
   watermark.loading = 'eager';
 
-  document.body.append(badge, watermark);
+  document.body.append(badge);
+  if (watermarkCorner !== 'none') {
+    document.body.append(watermark);
+  }
 })();

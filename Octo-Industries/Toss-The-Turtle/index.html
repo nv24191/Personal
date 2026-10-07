@@ -8,6 +8,8 @@
   <link rel="icon" href="../branding/favicon.ico">
   <link rel="stylesheet" href="../branding/game-branding.css">
   <script defer src="../branding/game-branding.js"></script>
+  <link rel="stylesheet" href="../branding/game-loader.css">
+  <script src="../branding/game-loader.js"></script>
   <style>
     :root {
       color-scheme: dark;
@@ -55,15 +57,12 @@
   <div id="game" aria-label="Toss The Turtle game"></div>
   <script>
     window.addEventListener("load", function () {
-      window.RufflePlayer.config = {
-        splashScreen: false,
-        contextMenu: "off"
-      };
-      var ruffle = window.RufflePlayer.newest();
-      var player = ruffle.createPlayer();
-      player.className = "game";
-      document.getElementById("game").replaceWith(player);
-      player.load("games/toss-the-turtle.swf");
+      OctoLoader.loadRuffle({
+        url: "games/toss-the-turtle.swf",
+        config: { contextMenu: "off" },
+        replace: document.getElementById("game"),
+        className: "game"
+      });
     });
   </script>
 </body>

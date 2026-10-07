@@ -73,7 +73,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 }
 
 .boot-screen.is-ready { opacity: 0; visibility: hidden; }
-.boot-mark { display: block; width: clamp(150px, 20vw, 190px); height: auto; filter: drop-shadow(0 0 20px rgba(242, 139, 135, .16)); animation: boot-pulse 1.5s ease-in-out infinite; }
+.boot-mark { display: block; width: clamp(150px, 20vw, 190px); height: auto; aspect-ratio: 640 / 720; object-fit: contain; filter: drop-shadow(0 0 20px rgba(242, 139, 135, .16)); animation: boot-pulse 1.5s ease-in-out infinite; }
 .boot-track { width: 94px; height: 2px; overflow: hidden; background: rgba(101, 230, 227, .18); }
 .boot-track i { display: block; width: 42%; height: 100%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: boot-load 1s ease-in-out infinite; }
 

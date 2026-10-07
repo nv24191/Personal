@@ -7,6 +7,9 @@
 <link rel="icon" href="../branding/favicon.ico">
 <link rel="stylesheet" href="../branding/game-branding.css">
 <script defer src="../branding/game-branding.js"></script>
+<link rel="stylesheet" href="../branding/game-loader.css">
+<script src="../branding/game-loader.js"></script>
+<style>#unity-loading-bar,#loading-cover,#loading-screen{display:none!important}</style>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -51,18 +54,18 @@
       container.className = "unity-mobile";
     }
     
-    loadingCover.style.display = "";
+    const octoLoader = OctoLoader.show();
 
     const unityLoader = document.createElement("script");
     unityLoader.src = loaderUrl;
     unityLoader.onload = () => {
       createUnityInstance(canvas, config, (progress) => {
-        progressBarEmpty.style.display = "";
-        progressBarFull.style.width = `${100 * progress}%`;
+        octoLoader.progress(progress * 100);
       }).then((unityInstance) => {
         window.unityInstance = unityInstance;
-        loadingCover.style.display = "none";
+        octoLoader.finish();
       }).catch((message) => {
+        octoLoader.finish();
         alert(message);
       });
     };
