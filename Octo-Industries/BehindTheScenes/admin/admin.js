@@ -206,32 +206,53 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
 }
 
-function updateMetrics(counts) {
+function updateMetrics(counts, games, activity) {
   document.querySelector('#metric-total').textContent = counts.total;
   document.querySelector('#metric-published').textContent = counts.published;
   document.querySelector('#metric-drafts').textContent = counts.drafts;
   document.querySelector('#metric-offline').textContent = counts.offlineReady;
   document.querySelector('#metric-failed').textContent = counts.failedJobs;
+  document.querySelector('#metric-categories').textContent = new Set(games.map((game) => game.category).filter(Boolean)).size;
+  document.querySelector('#metric-activity').textContent = activity.length;
 }
 
 function renderGames() {
   const container = document.querySelector('#game-list');
   const query = document.querySelector('#game-filter').value.trim().toLocaleLowerCase();
   const status = document.querySelector('#status-filter').value;
+  const category = document.querySelector('#category-filter');
+  const selectedCategory = category.value;
+  const sorting = document.querySelector('#game-sort').value;
+  const categories = [...new Set(dashboard.games.map((game) => game.category).filter(Boolean))]
+    .sort((first, second) => first.localeCompare(second));
+  category.replaceChildren(new Option('All categories', 'all'));
+  for (const name of categories) category.add(new Option(name, name));
+  if (categories.includes(selectedCategory)) category.value = selectedCategory;
   const games = dashboard.games.filter((game) => {
     const searchable = [game.title, game.category, game.description, ...(game.tags || [])].join(' ').toLocaleLowerCase();
-    return (!query || searchable.includes(query)) && (status === 'all' || game.status === status);
+    return (!query || searchable.includes(query))
+      && (status === 'all' || game.status === status)
+      && (category.value === 'all' || game.category === category.value);
+  });
+  games.sort((first, second) => {
+    if (sorting === 'category') return (first.category || '').localeCompare(second.category || '') || first.title.localeCompare(second.title);
+    if (sorting === 'status') return first.status.localeCompare(second.status) || first.title.localeCompare(second.title);
+    return first.title.localeCompare(second.title);
   });
   document.querySelector('#library-count').textContent = `${games.length} of ${dashboard.games.length}`;
-  container.innerHTML = games.length ? games.map((game) => `
-    <article class="game-row">
-      <div><p class="game-title">${escapeHtml(game.title)}</p><span class="game-meta">${escapeHtml(game.category)} · ${escapeHtml(game.status)}${game.offlineReady === true ? ' · offline verified' : ''}</span></div>
-      <div class="game-actions">
-        <button class="small-button" type="button" data-action="edit" data-id="${escapeHtml(game.id)}">Edit</button>
-        <button class="small-button" type="button" data-action="health" data-id="${escapeHtml(game.id)}">Health check</button>
-        <button class="small-button ${game.status === 'published' ? 'is-published' : ''}" type="button" data-action="publish" data-published="${game.status !== 'published'}" data-id="${escapeHtml(game.id)}">${game.status === 'published' ? 'Unpublish' : 'Publish'}</button>
-      </div>
-    </article>`).join('') : '<p class="muted">No games match these filters.</p>';
+  container.innerHTML = games.length ? `<div class="table-wrap"><table class="game-table">
+    <caption class="visually-hidden">Manage games in the Octo Industries library</caption>
+    <thead><tr><th scope="col">Game</th><th scope="col">Category</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+    <tbody>${games.map((game) => `<tr>
+      <td><span class="game-title">${escapeHtml(game.title)}</span><span class="game-meta">${escapeHtml(game.description || (game.tags || []).join(', '))}</span></td>
+      <td>${escapeHtml(game.category || 'Uncategorized')}</td>
+      <td><span class="game-status" data-status="${escapeHtml(game.status)}">${escapeHtml(game.status)}</span>${game.offlineReady === true ? '<span class="offline-status">Offline verified</span>' : ''}</td>
+      <td><div class="game-actions">
+        <button class="small-button" type="button" data-action="edit" data-id="${escapeHtml(game.id)}" aria-label="Edit ${escapeHtml(game.title)}">Edit</button>
+        <button class="small-button" type="button" data-action="health" data-id="${escapeHtml(game.id)}" aria-label="Run health check for ${escapeHtml(game.title)}">Health check</button>
+        <button class="small-button ${game.status === 'published' ? 'is-published' : ''}" type="button" data-action="publish" data-published="${game.status !== 'published'}" data-id="${escapeHtml(game.id)}" aria-label="${game.status === 'published' ? 'Unpublish' : 'Publish'} ${escapeHtml(game.title)}">${game.status === 'published' ? 'Unpublish' : 'Publish'}</button>
+      </div></td>
+    </tr>`).join('')}</tbody></table></div>` : '<p class="muted">No games match these filters.</p>';
 }
 
 function renderJobs() {
@@ -432,7 +453,7 @@ async function updateFeedbackStatus(id, status) {
 async function refreshDashboard() {
   dashboard = await api('/api/admin/dashboard');
   feedbackEntries = await api('/api/admin/feedback');
-  updateMetrics(dashboard.counts);
+  updateMetrics(dashboard.counts, dashboard.games, dashboard.activity);
   renderGames();
   renderJobs();
   renderActivity();
@@ -705,6 +726,8 @@ document.querySelector('.chat-prompts').addEventListener('click', (event) => {
 
 document.querySelector('#game-filter').addEventListener('input', renderGames);
 document.querySelector('#status-filter').addEventListener('change', renderGames);
+document.querySelector('#category-filter').addEventListener('change', renderGames);
+document.querySelector('#game-sort').addEventListener('change', renderGames);
 
 document.querySelector('#game-list').addEventListener('click', async (event) => {
   const button = event.target.closest('[data-action]');

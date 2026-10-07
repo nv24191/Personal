@@ -34,7 +34,10 @@
     <section id="dashboard-view" hidden>
       <div class="welcome-row">
         <div><p class="eyebrow">OCTO INDUSTRIES / ADMIN</p><h1>Library control room</h1><p class="muted">Review your catalog, inspect game pages, and track administrative jobs.</p></div>
-        <button class="button button-secondary" id="build-button" type="button">Build standalone hub <span aria-hidden="true">↗</span></button>
+        <div class="overview-actions">
+          <nav class="quick-links" aria-label="Dashboard shortcuts"><a href="#library-title">Games</a><a href="#feedback-inbox-title">Inbox</a><a href="#admin-tools">Admin tools</a></nav>
+          <button class="button button-secondary" id="build-button" type="button">Build standalone hub <span aria-hidden="true">↗</span></button>
+        </div>
       </div>
 
       <section class="metrics" aria-label="Library summary">
@@ -43,8 +46,32 @@
         <article class="metric"><span>Drafts</span><strong id="metric-drafts">—</strong></article>
         <article class="metric"><span>Offline verified</span><strong id="metric-offline">—</strong></article>
         <article class="metric"><span>Failed jobs</span><strong id="metric-failed">—</strong></article>
+        <article class="metric"><span>Categories</span><strong id="metric-categories">—</strong></article>
+        <article class="metric"><span>Recent activity</span><strong id="metric-activity">—</strong></article>
       </section>
 
+      <div class="content-grid">
+        <section class="panel library-panel" aria-labelledby="library-title">
+          <div class="section-heading"><div><p class="eyebrow">CANONICAL LIBRARY</p><h2 id="library-title">Games</h2></div><span class="subtle" id="library-count"></span></div>
+          <div class="toolbar">
+            <label class="visually-hidden" for="game-filter">Search games</label>
+            <input type="search" id="game-filter" placeholder="Search title, category, tags, or description">
+            <label class="visually-hidden" for="status-filter">Filter by status</label>
+            <select id="status-filter"><option value="all">All statuses</option><option value="published">Published</option><option value="draft">Draft</option></select>
+            <label class="visually-hidden" for="category-filter">Filter by category</label>
+            <select id="category-filter"><option value="all">All categories</option></select>
+            <label class="visually-hidden" for="game-sort">Sort games</label>
+            <select id="game-sort"><option value="title">Title A to Z</option><option value="category">Category</option><option value="status">Status</option></select>
+          </div>
+          <div class="game-list" id="game-list" aria-live="polite"></div>
+        </section>
+        <aside class="side-column" aria-label="System activity">
+          <section class="panel" aria-labelledby="jobs-title"><div class="section-heading"><div><p class="eyebrow">BACKGROUND TASKS</p><h2 id="jobs-title">Recent jobs</h2></div></div><div class="job-list" id="job-list" aria-live="polite"></div></section>
+          <section class="panel" aria-labelledby="activity-title"><div class="section-heading"><div><p class="eyebrow">AUDIT TRAIL</p><h2 id="activity-title">Admin activity</h2></div></div><div class="activity-list" id="activity-list" aria-live="polite"></div></section>
+        </aside>
+      </div>
+
+      <div class="tools-grid" id="admin-tools">
       <section class="panel feedback-inbox" aria-labelledby="feedback-inbox-title">
         <div class="section-heading"><div><p class="eyebrow">PRIVATE INBOX</p><h2 id="feedback-inbox-title">Suggestions &amp; Issues <span class="feedback-new-badge" id="feedback-new-count">0 New</span></h2></div></div>
         <div class="feedback-toolbar">
@@ -105,21 +132,6 @@
         <p class="notice" id="chat-message" role="status" hidden></p>
       </section>
 
-      <div class="content-grid">
-        <section class="panel library-panel" aria-labelledby="library-title">
-          <div class="section-heading"><div><p class="eyebrow">CANONICAL LIBRARY</p><h2 id="library-title">Games</h2></div><span class="subtle" id="library-count"></span></div>
-          <div class="toolbar">
-            <label class="visually-hidden" for="game-filter">Search games</label>
-            <input type="search" id="game-filter" placeholder="Search games">
-            <label class="visually-hidden" for="status-filter">Filter by status</label>
-            <select id="status-filter"><option value="all">All statuses</option><option value="published">Published</option><option value="draft">Draft</option></select>
-          </div>
-          <div class="game-list" id="game-list"></div>
-        </section>
-        <aside class="side-column">
-          <section class="panel" aria-labelledby="jobs-title"><div class="section-heading"><div><p class="eyebrow">BACKGROUND TASKS</p><h2 id="jobs-title">Recent jobs</h2></div></div><div class="job-list" id="job-list"></div></section>
-          <section class="panel" aria-labelledby="activity-title"><div class="section-heading"><div><p class="eyebrow">AUDIT TRAIL</p><h2 id="activity-title">Admin activity</h2></div></div><div class="activity-list" id="activity-list"></div></section>
-        </aside>
       </div>
     </section>
   </main>
