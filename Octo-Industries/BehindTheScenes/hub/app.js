@@ -208,6 +208,7 @@ function bindEvents() {
     window.setTimeout(() => searchInput.focus({ preventScroll: true }), reducedMotion ? 0 : 350);
     document.querySelector('#primary-nav').classList.remove('is-open');
     document.querySelector('#menu-toggle').setAttribute('aria-expanded', 'false');
+    document.querySelector('#menu-toggle').setAttribute('aria-label', 'Open navigation');
   }));
 
   document.querySelector('#feature-previous').addEventListener('click', () => showSlide(-1));
@@ -303,6 +304,95 @@ function bindEvents() {
   }
 }
 
+function browserDeviceInfo() {
+  const ua = navigator.userAgent || '';
+  const platform = navigator.userAgentData?.platform || navigator.platform || '';
+  const deviceType = navigator.userAgentData?.mobile
+    ? 'Mobile'
+    : /iPad|Tablet/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+      ? 'Tablet'
+      : 'Desktop';
+  const operatingSystem = /Windows/i.test(platform + ua) ? 'Windows'
+    : /Android/i.test(platform + ua) ? 'Android'
+      : /iPhone|iPad|iPod|iOS/i.test(platform + ua) ? 'iOS'
+        : /Mac OS|Macintosh/i.test(platform + ua) ? 'macOS'
+          : /Linux/i.test(platform + ua) ? 'Linux' : 'Unknown';
+  const browser = /Edg\//.test(ua) ? 'Edge'
+    : /OPR\//.test(ua) ? 'Opera'
+      : /SamsungBrowser\//.test(ua) ? 'Samsung Internet'
+        : /Firefox\//.test(ua) ? 'Firefox'
+          : /Chrome\//.test(ua) ? 'Chrome'
+            : /Safari\//.test(ua) ? 'Safari' : 'Unknown';
+  return {
+    deviceType,
+    operatingSystem,
+    browser,
+    screenResolution: Number.isFinite(screen.width) && Number.isFinite(screen.height)
+      ? `${screen.width} × ${screen.height}` : '',
+    octoVersion: document.querySelector('meta[name="octo-version"]')?.content || window.OCTO_BUILD_VERSION || '',
+  };
+}
+
+function bindFeedbackForm() {
+  const dialog = document.querySelector('#feedback-dialog');
+  const form = document.querySelector('#feedback-form');
+  const type = document.querySelector('#feedback-type');
+  const game = document.querySelector('#feedback-game');
+  const gameLabel = document.querySelector('#feedback-game-label');
+  const status = document.querySelector('#feedback-status');
+  for (const entry of games) {
+    const option = document.createElement('option');
+    option.value = entry.id;
+    option.textContent = entry.title;
+    game.append(option);
+  }
+  const open = () => {
+    document.querySelector('#primary-nav').classList.remove('is-open');
+    document.querySelector('#menu-toggle').setAttribute('aria-expanded', 'false');
+    document.querySelector('#menu-toggle').setAttribute('aria-label', 'Open navigation');
+    dialog.showModal();
+  };
+  document.querySelectorAll('#feedback-open, [data-feedback-open]').forEach((button) => button.addEventListener('click', open));
+  document.querySelector('#feedback-close').addEventListener('click', () => dialog.close());
+  document.querySelector('#feedback-cancel').addEventListener('click', () => dialog.close());
+  type.addEventListener('change', () => {
+    const isIssue = type.value === 'issue';
+    game.hidden = !isIssue;
+    gameLabel.hidden = !isIssue;
+    if (!isIssue) game.value = '';
+  });
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = document.querySelector('#feedback-submit');
+    button.disabled = true;
+    status.hidden = false;
+    status.textContent = 'Sending your feedback…';
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          type: type.value,
+          gameId: game.value,
+          message: document.querySelector('#feedback-message').value,
+          deviceInfo: browserDeviceInfo(),
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || 'Could not send feedback. Please try again.');
+      form.reset();
+      game.hidden = true;
+      gameLabel.hidden = true;
+      status.textContent = 'Thanks — your feedback was sent.';
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
 function drawAmbient() {
   const canvas = document.querySelector('#ambient');
   const context = canvas?.getContext('2d');
@@ -369,6 +459,7 @@ function drawAmbient() {
 
 function start() {
   const bootScreen = document.querySelector('#boot-screen');
+  bindFeedbackForm();
   requestAnimationFrame(() => bootScreen?.classList.add('is-ready'));
   window.setTimeout(() => bootScreen?.remove(), 550);
 

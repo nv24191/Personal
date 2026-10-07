@@ -9,6 +9,9 @@ let dashboard;
 const chatHistory = [];
 let refreshTimer;
 let toastTimer;
+let feedbackEntries = [];
+const openedFeedback = new Set();
+const selectedFeedback = new Set();
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -320,13 +323,121 @@ function renderProposals() {
   }
 }
 
+const feedbackStatusLabels = {
+  new: '🆕 New',
+  seen: '👁️ Seen',
+  working: '🔧 Working On It',
+  resolved: '✅ Resolved',
+  important: '📌 Important',
+  archived: '🗄️ Archived',
+};
+
+function formatFeedbackDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Unknown time' : new Intl.DateTimeFormat('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short',
+  }).format(date);
+}
+
+function renderFeedback() {
+  const games = new Map((dashboard?.games || []).map((game) => [game.id, game.title]));
+  const query = document.querySelector('#feedback-search').value.trim().toLocaleLowerCase();
+  const type = document.querySelector('#feedback-type-filter').value;
+  const status = document.querySelector('#feedback-status-filter').value;
+  const gameId = document.querySelector('#feedback-game-filter').value;
+  const sorting = document.querySelector('#feedback-sort').value;
+  const filtered = feedbackEntries.filter((entry) => {
+    const searchable = [
+      entry.message, games.get(entry.gameId) || '', entry.type,
+      entry.deviceInfo?.deviceType, entry.deviceInfo?.operatingSystem, entry.deviceInfo?.browser,
+      entry.deviceInfo?.screenResolution, entry.deviceInfo?.octoVersion,
+    ].join(' ').toLocaleLowerCase();
+    return (!query || searchable.includes(query))
+      && (type === 'all' || entry.type === type)
+      && (status === 'all' || entry.status === status)
+      && (gameId === 'all' || (gameId === 'none' ? !entry.gameId : entry.gameId === gameId));
+  });
+  const statusOrder = ['new', 'important', 'working', 'seen', 'resolved', 'archived'];
+  filtered.sort((first, second) => {
+    if (sorting === 'oldest') return first.createdAt.localeCompare(second.createdAt);
+    if (sorting === 'updated') return second.updatedAt.localeCompare(first.updatedAt);
+    if (sorting === 'status') return statusOrder.indexOf(first.status) - statusOrder.indexOf(second.status);
+    if (sorting === 'type') return first.type.localeCompare(second.type) || second.createdAt.localeCompare(first.createdAt);
+    if (sorting === 'game') return (games.get(first.gameId) || '').localeCompare(games.get(second.gameId) || '');
+    return second.createdAt.localeCompare(first.createdAt);
+  });
+  const newCount = feedbackEntries.filter((entry) => entry.status === 'new').length;
+  const seenCount = feedbackEntries.filter((entry) => entry.status === 'seen').length;
+  const visibleIds = new Set(filtered.map((entry) => entry.id));
+  for (const id of selectedFeedback) {
+    if (!feedbackEntries.some((entry) => entry.id === id)) selectedFeedback.delete(id);
+  }
+  document.querySelector('#feedback-new-count').textContent = `${newCount} New · ${seenCount} Seen`;
+  const gameFilter = document.querySelector('#feedback-game-filter');
+  const selectedGame = gameFilter.value;
+  gameFilter.replaceChildren(new Option('All games', 'all'), new Option('Not related to a game', 'none'));
+  for (const game of dashboard?.games || []) gameFilter.add(new Option(game.title, game.id));
+  if ([...gameFilter.options].some((option) => option.value === selectedGame)) gameFilter.value = selectedGame;
+
+  const container = document.querySelector('#feedback-list');
+  container.innerHTML = filtered.length ? filtered.map((entry) => {
+    const device = entry.deviceInfo || {};
+    const deviceSummary = [device.deviceType, device.operatingSystem, device.browser].filter(Boolean).join(' · ') || 'Unknown device';
+    const technical = [
+      device.screenResolution && `Screen: ${device.screenResolution}`,
+      device.octoVersion && `Build: ${device.octoVersion}`,
+    ].filter(Boolean).join(' · ');
+    return `<article class="feedback-card${entry.status === 'new' ? ' is-new' : ''}" data-feedback-card="${entry.id}">
+      <div class="feedback-card-top">
+        <label class="feedback-select-label"><input type="checkbox" data-feedback-select="${entry.id}"${selectedFeedback.has(entry.id) ? ' checked' : ''} aria-label="Select this feedback"></label>
+        <div class="feedback-title"><span class="feedback-type" data-type="${entry.type}">${entry.type === 'issue' ? '🐛 ISSUE' : '💡 SUGGESTION'}</span><span class="feedback-game">${escapeHtml(entry.gameId ? games.get(entry.gameId) || 'Unknown game' : 'Not related to a game')}</span></div>
+        <span class="feedback-time">${escapeHtml(formatFeedbackDate(entry.createdAt))}</span>
+      </div>
+      <p class="feedback-message">${escapeHtml(entry.message)}</p>
+      <p class="feedback-device">${escapeHtml(deviceSummary)}${technical ? ` · ${escapeHtml(technical)}` : ''}</p>
+      <div class="feedback-controls">
+        <label>Status
+          <select data-feedback-status="${entry.id}" aria-label="Status for feedback">
+            ${Object.entries(feedbackStatusLabels).map(([key, label]) => `<option value="${key}"${entry.status === key ? ' selected' : ''}>${label}</option>`).join('')}
+          </select>
+        </label>
+        <span class="feedback-updated">Updated ${escapeHtml(formatFeedbackDate(entry.updatedAt))}</span>
+      </div>
+      <details data-feedback-details="${entry.id}"${openedFeedback.has(entry.id) ? ' open' : ''}>
+        <summary>Open feedback and private admin notes</summary>
+        <label for="feedback-note-${entry.id}">Private admin notes</label>
+        <textarea id="feedback-note-${entry.id}" data-feedback-notes="${entry.id}" rows="3" maxlength="5000">${escapeHtml(entry.adminNotes || '')}</textarea>
+        <button class="small-button" type="button" data-save-feedback-notes="${entry.id}">Save private notes</button>
+      </details>
+    </article>`;
+  }).join('') : '<p class="muted feedback-empty">No feedback matches these filters.</p>';
+  document.querySelector('#feedback-selection-count').textContent = `${selectedFeedback.size} selected`;
+  document.querySelector('#feedback-select-all').checked = visibleIds.size > 0 && [...visibleIds].every((id) => selectedFeedback.has(id));
+}
+
+async function updateFeedbackStatus(id, status) {
+  const result = await api(`/api/admin/feedback/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+  const entry = feedbackEntries.find((feedback) => feedback.id === id);
+  if (entry) {
+    entry.status = status;
+    entry.updatedAt = result.updatedAt;
+  }
+  if (status === 'new') openedFeedback.delete(id);
+  renderFeedback();
+}
+
 async function refreshDashboard() {
   dashboard = await api('/api/admin/dashboard');
+  feedbackEntries = await api('/api/admin/feedback');
   updateMetrics(dashboard.counts);
   renderGames();
   renderJobs();
   renderActivity();
   renderProposals();
+  renderFeedback();
   if (dashboard.jobs.some((job) => job.status === 'queued' || job.status === 'running')) {
     if (!refreshTimer) refreshTimer = setInterval(() => refreshDashboard().catch((error) => showToast(error.message)), 2200);
   } else {
@@ -463,6 +574,123 @@ document.querySelector('#proposal-list').addEventListener('click', async (event)
     await refreshDashboard();
   } catch (error) {
     showToast(error.message);
+    button.disabled = false;
+  }
+});
+
+const feedbackList = document.querySelector('#feedback-list');
+feedbackList.addEventListener('toggle', async (event) => {
+  const details = event.target.closest('details[data-feedback-details]');
+  if (!details) return;
+  const id = details.dataset.feedbackDetails;
+  if (details.open) {
+    openedFeedback.add(id);
+    const entry = feedbackEntries.find((feedback) => feedback.id === id);
+    if (entry?.status === 'new') {
+      try {
+        await updateFeedbackStatus(id, 'seen');
+      } catch (error) {
+        showToast(error.message);
+      }
+    }
+  } else {
+    openedFeedback.delete(id);
+  }
+}, true);
+
+feedbackList.addEventListener('change', async (event) => {
+  const status = event.target.closest('[data-feedback-status]');
+  if (status) {
+    status.disabled = true;
+    try {
+      await updateFeedbackStatus(status.dataset.feedbackStatus, status.value);
+    } catch (error) {
+      showToast(error.message);
+      renderFeedback();
+    }
+    return;
+  }
+  if (event.target.matches('[data-feedback-select]')) {
+    if (event.target.checked && selectedFeedback.size >= 50) {
+      event.target.checked = false;
+      showToast('Select up to 50 submissions per bulk action.');
+      return;
+    }
+    if (event.target.checked) selectedFeedback.add(event.target.dataset.feedbackSelect);
+    else selectedFeedback.delete(event.target.dataset.feedbackSelect);
+    document.querySelector('#feedback-selection-count').textContent = `${selectedFeedback.size} selected`;
+  }
+});
+
+feedbackList.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-save-feedback-notes]');
+  if (!button) return;
+  button.disabled = true;
+  const id = button.dataset.saveFeedbackNotes;
+  const notes = feedbackList.querySelector(`[data-feedback-notes="${id}"]`).value;
+  try {
+    const result = await api(`/api/admin/feedback/${encodeURIComponent(id)}/notes`, {
+      method: 'PATCH',
+      body: JSON.stringify({ adminNotes: notes }),
+    });
+    const entry = feedbackEntries.find((feedback) => feedback.id === id);
+    if (entry) {
+      entry.adminNotes = notes.trim();
+      entry.updatedAt = result.updatedAt;
+    }
+    showToast('Private notes saved.');
+    renderFeedback();
+    const details = feedbackList.querySelector(`[data-feedback-details="${id}"]`);
+    if (details) details.open = true;
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+  }
+});
+
+for (const selector of ['#feedback-search', '#feedback-type-filter', '#feedback-status-filter', '#feedback-game-filter', '#feedback-sort']) {
+  document.querySelector(selector).addEventListener(selector === '#feedback-search' ? 'input' : 'change', renderFeedback);
+}
+document.querySelector('#feedback-select-all').addEventListener('change', (event) => {
+  feedbackList.querySelectorAll('input[data-feedback-select]').forEach((checkbox) => {
+    const id = checkbox.dataset.feedbackSelect;
+    if (event.currentTarget.checked) {
+      if (selectedFeedback.size < 50 || selectedFeedback.has(id)) {
+        checkbox.checked = true;
+        selectedFeedback.add(id);
+      } else {
+        checkbox.checked = false;
+      }
+    } else {
+      checkbox.checked = false;
+      selectedFeedback.delete(id);
+    }
+  });
+  const allVisibleSelected = [...feedbackList.querySelectorAll('input[data-feedback-select]')].every((checkbox) => checkbox.checked);
+  event.currentTarget.checked = event.currentTarget.checked && allVisibleSelected;
+  if (selectedFeedback.size === 50 && !allVisibleSelected) showToast('Select up to 50 submissions per bulk action.');
+  document.querySelector('#feedback-selection-count').textContent = `${selectedFeedback.size} selected`;
+});
+document.querySelector('#feedback-bulk-apply').addEventListener('click', async (event) => {
+  const ids = [...selectedFeedback];
+  const status = document.querySelector('#feedback-bulk-status').value;
+  if (!ids.length || !status) {
+    showToast('Select feedback and choose a status first.');
+    return;
+  }
+  if (status === 'archived' && !window.confirm(`Archive ${ids.length} selected submission${ids.length === 1 ? '' : 's'}? You can restore them later.`)) return;
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const result = await api('/api/admin/feedback/bulk', { method: 'POST', body: JSON.stringify({ ids, status }) });
+    showToast(`Updated ${result.updated} submission${result.updated === 1 ? '' : 's'}.`);
+    if (status === 'new') ids.forEach((id) => openedFeedback.delete(id));
+    selectedFeedback.clear();
+    document.querySelector('#feedback-select-all').checked = false;
+    await refreshDashboard();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
     button.disabled = false;
   }
 });

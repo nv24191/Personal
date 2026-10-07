@@ -57,6 +57,10 @@ The Node deployment's game URL scanner is intentionally a bounded source inspect
 
 The generated standalone hub embeds the current published catalog but uses the site's existing static CSS, JavaScript, and game files; it is not a self-contained bundle. It is available at `/masterstandalone.html` after the admin build job completes.
 
+## Suggestions and issues
+
+The public hub footer and navigation include a no-account feedback form. Users can send a suggestion or issue without providing identifying details; issue reports may optionally select a published game. Feedback records contain the message, optional game ID, coarse device/browser/OS/screen/build metadata, status, private admin notes, and a server-generated UTC timestamp. No name, email, full user agent, or raw IP address is stored. Submissions are rate-limited and visible only in the authenticated admin inbox, where they can be searched, filtered, sorted, marked seen, assigned a workflow status, privately annotated, or archived. Feedback is stored in the existing Cloudflare D1 database using `migrations/0002_feedback.sql`; apply this migration after `0001_admin.sql` on the Pages/Render D1 database before deploying this feature.
+
 ## Hosting
 
 The free Cloudflare Pages deployment publishes the static hub and its Functions API. If the `pages.dev` domain is blocked on a device or network, deploy the Node service to Render Free instead. Render Static Sites cannot run the Node admin server; use a **Web Service**. Render Free sleeps after inactivity and its local disk is temporary, so this configuration stores admin changes durably in the existing Cloudflare D1 database through the Cloudflare API. This means the game site itself is served from Render, not `pages.dev`.
@@ -65,7 +69,7 @@ To build the Cloudflare Pages assets locally, run `npm run pages:build` from the
 
 ### Cloudflare Pages setup
 
-1. In the Cloudflare dashboard, create a D1 database named `octo-industries-admin`. Open its SQL console and run the contents of `migrations/0001_admin.sql`.
+1. In the Cloudflare dashboard, create a D1 database named `octo-industries-admin`. Open its SQL console and run `migrations/0001_admin.sql`, followed by `migrations/0002_feedback.sql`.
 2. Under **Workers & Pages**, create a **Pages** application connected to this GitHub repository. Set the root directory to `/`, the build command to `npm run pages:build`, and the build output directory to `.cloudflare-dist`. Deploy the `main` branch.
 3. In the Pages project, open **Settings → Functions → D1 database bindings**. Add a binding named `ADMIN_DB` and select `octo-industries-admin`, save, then redeploy.
 4. In **Settings → Variables and Secrets**, add the production secret with key/name `OCTO_ADMIN_PASSWORD_HASH`. Generate it locally with `npm --prefix Octo-Industries/BehindTheScenes run admin:hash` in an interactive terminal. In Cloudflare's **Value** box, paste only the part after `OCTO_ADMIN_PASSWORD_HASH=` (it starts with `pbkdf2$`); never expose or commit the password. Add another secret named `GEMINI_API_KEY` if you want the chatbot enabled. Optionally set `OCTO_GEMINI_MODEL`; the default is `gemini-3.1-flash-lite`.
@@ -78,7 +82,8 @@ Cloudflare's Free plan has request, compute, D1, build, file-count, and file-siz
 1. Create a Cloudflare API token with **D1: Edit** permission scoped to this account. Keep the token secret.
 2. In Render, create a **New → Blueprint Instance** connected to this repository and apply `render.yaml`. If the existing Static Site has a conflicting service name, keep the Node Web Service name `octo-industries-hub-web`; do not convert or delete the Static Site yet.
 3. When prompted, set `OCTO_ADMIN_PASSWORD_HASH` to the generated `pbkdf2$...` hash, `CF_D1_API_TOKEN` to the Cloudflare API token, `GEMINI_API_KEY` to your Google AI Studio key, and `GITHUB_TOKEN` to a fine-grained token scoped only to `nv24191/Personal` with **Contents: Read and write** and **Pull requests: Read and write** permissions. The account and database IDs are already in `render.yaml`. Do not enter the raw admin password, and do not commit secrets.
-4. Wait for the Node **Web Service** to become Live. Use its new `*.onrender.com` address; `/admin/` should load there. Free services can take about a minute to wake after 15 minutes idle. Catalog edits and activity persist in D1 across sleeps/redeploys. Gemini remains optional and subject to Google's free-tier quota.
+4. Before deploying feedback support, run `migrations/0002_feedback.sql` in the Cloudflare D1 SQL console for the database configured by `CF_D1_DATABASE_ID`.
+5. Wait for the Node **Web Service** to become Live. Use its new `*.onrender.com` address; `/admin/` should load there. Free services can take about a minute to wake after 15 minutes idle. Catalog edits and activity persist in D1 across sleeps/redeploys. Gemini remains optional and subject to Google's free-tier quota.
 
 Run `npm --prefix Octo-Industries/BehindTheScenes run sync` after changing game metadata or adding a game, then commit the generated `Octo-Industries/BehindTheScenes/hub/catalog.js`. The Cloudflare Pages build runs this sync automatically before deployment.
 

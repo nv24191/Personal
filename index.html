@@ -37,6 +37,7 @@
       <a class="nav-link" href="#categories">Categories</a>
       <button class="nav-link nav-search" type="button">Search</button>
       <a class="nav-link" href="#about">About</a>
+      <button class="nav-link" id="feedback-open" type="button">Suggestions / Issues</button>
       <a class="nav-link" href="/admin">Admin sign in</a>
     </nav>
     <a class="header-cta" href="#games"><span class="live-dot"></span><span><b id="header-count">06</b> TITLES</span><span class="cta-arrow" aria-hidden="true">↗</span></a>
@@ -105,6 +106,30 @@
     </section>
   </main>
 
+  <dialog class="feedback-dialog" id="feedback-dialog" aria-labelledby="feedback-title">
+    <form class="feedback-form" id="feedback-form">
+      <header class="gallery-header">
+        <div><p class="eyebrow"><span class="eyebrow-line"></span> HELP US MAKE OCTO BETTER</p><h2 id="feedback-title">Suggestions / Issues</h2></div>
+        <button class="gallery-close" id="feedback-close" type="button" aria-label="Close feedback form">×</button>
+      </header>
+      <label for="feedback-type">What are you sending?</label>
+      <select id="feedback-type" name="type" required>
+        <option value="">Choose one</option>
+        <option value="suggestion">💡 Suggestion</option>
+        <option value="issue">🐛 Issue</option>
+      </select>
+      <label id="feedback-game-label" for="feedback-game" hidden>Game (optional)</label>
+      <select id="feedback-game" name="gameId" hidden>
+        <option value="">Not related to a game</option>
+      </select>
+      <label for="feedback-message">Your message</label>
+      <textarea id="feedback-message" name="message" rows="5" maxlength="5000" placeholder="Tell us about your suggestion or issue..." required></textarea>
+      <p class="feedback-privacy">No name, email, account, or phone number is needed. We only collect basic device details to help us investigate.</p>
+      <p class="feedback-status" id="feedback-status" role="status" aria-live="polite" hidden></p>
+      <div class="feedback-actions"><button class="button button-secondary" id="feedback-cancel" type="button">Cancel</button><button class="button button-primary" id="feedback-submit" type="submit">Send</button></div>
+    </form>
+  </dialog>
+
   <dialog class="screenshot-gallery" id="screenshot-gallery" aria-labelledby="gallery-title">
     <div class="gallery-panel">
       <header class="gallery-header">
@@ -121,6 +146,6 @@
     </div>
   </dialog>
 
-  <footer class="site-footer content-width"><a class="footer-brand" href="#top" aria-label="Octo Industries home"><img src="Octo-Industries/branding/horizontal-logo.png" alt=""></a><span>© Octo Industries Inc. All Rights Reserved.</span><a class="footer-admin-link" href="/admin">ADMIN SIGN IN <span aria-hidden="true">↗</span></a><a class="back-to-top" href="#top">BACK TO TOP <span aria-hidden="true">↑</span></a></footer>
+  <footer class="site-footer content-width"><a class="footer-brand" href="#top" aria-label="Octo Industries home"><img src="Octo-Industries/branding/horizontal-logo.png" alt=""></a><span>© Octo Industries Inc. All Rights Reserved.</span><button class="footer-feedback-link" type="button" data-feedback-open>SUGGESTIONS / ISSUES</button><a class="footer-admin-link" href="/admin">ADMIN SIGN IN <span aria-hidden="true">↗</span></a><a class="back-to-top" href="#top">BACK TO TOP <span aria-hidden="true">↑</span></a></footer>
 </body>
 </html>

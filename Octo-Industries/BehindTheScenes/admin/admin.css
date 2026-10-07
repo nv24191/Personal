@@ -39,6 +39,35 @@ h2 { margin-bottom: 0; font-size: 22px; }
 .metric { display: grid; min-height: 94px; align-content: space-between; padding: 15px; border-radius: 10px; }
 .metric span { color: var(--muted); font-size: 11px; }
 .metric strong { font: 600 25px 'Avenir Next', 'Segoe UI', sans-serif; }
+.feedback-inbox { margin-bottom: 17px; }
+.feedback-inbox h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.feedback-new-badge { padding: 5px 9px; border: 1px solid rgba(255, 146, 136, .35); border-radius: 30px; color: var(--red); font-size: 10px; letter-spacing: 0; }
+.feedback-toolbar { display: grid; grid-template-columns: minmax(190px, 1.7fr) repeat(4, minmax(120px, 1fr)); gap: 8px; }
+.feedback-toolbar select, .feedback-bulk select, .feedback-controls select { min-height: 38px; padding: 0 9px; font-size: 11px; }
+.feedback-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.feedback-bulk .check-label { margin: 0; }
+.feedback-bulk select { width: auto; min-width: 130px; }
+.feedback-list { display: grid; gap: 10px; }
+.feedback-card { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: rgba(18, 35, 45, .56); }
+.feedback-card.is-new { border-color: rgba(255, 146, 136, .38); }
+.feedback-card-top { display: flex; align-items: center; gap: 10px; }
+.feedback-select-label { display: flex; align-items: center; }
+.feedback-select-label input, .feedback-bulk input { width: 16px; min-height: 16px; accent-color: var(--cyan); }
+.feedback-title { display: grid; gap: 4px; }
+.feedback-type { font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+.feedback-type[data-type="issue"] { color: var(--red); }
+.feedback-type[data-type="suggestion"] { color: var(--cyan); }
+.feedback-game, .feedback-time, .feedback-device, .feedback-updated { color: var(--muted); font-size: 10px; }
+.feedback-time { margin-left: auto; text-align: right; }
+.feedback-message { margin: 0; color: var(--ink); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+.feedback-controls { display: flex; align-items: center; gap: 12px; }
+.feedback-controls label { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; }
+.feedback-controls select { width: auto; min-width: 150px; }
+.feedback-card details { border-top: 1px solid var(--line); padding-top: 9px; }
+.feedback-card summary { color: var(--cyan); cursor: pointer; font-size: 11px; }
+.feedback-card details label { display: block; margin: 10px 0 5px; color: var(--muted); font-size: 10px; }
+.feedback-card details textarea { display: block; min-height: 70px; margin-bottom: 8px; font-size: 11px; line-height: 1.5; }
+.feedback-empty { padding: 10px 0; }
 .panel { padding: 20px; border-radius: 12px; }
 .agent-panel { margin-bottom: 17px; }
 .chat-panel { margin-bottom: 17px; }
@@ -130,6 +159,8 @@ form label { display: block; margin: 13px 0 7px; color: var(--muted); font-size:
 
 @media (max-width: 900px) {
   .metrics { grid-template-columns: repeat(3, 1fr); }
+  .feedback-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .feedback-toolbar input { grid-column: 1 / -1; }
   .content-grid { grid-template-columns: 1fr; }
   .side-column { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 }
@@ -140,6 +171,11 @@ form label { display: block; margin: 13px 0 7px; color: var(--muted); font-size:
   .quiet-link { font-size: 10px; }
   .welcome-row { align-items: start; flex-direction: column; padding-top: 30px; }
   .metrics { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .feedback-toolbar { grid-template-columns: 1fr; }
+  .feedback-toolbar input { grid-column: auto; }
+  .feedback-card-top { align-items: flex-start; }
+  .feedback-time { max-width: 45%; font-size: 9px; }
+  .feedback-controls { align-items: flex-start; flex-direction: column; }
   .metric { min-height: 78px; padding: 11px; }
   .metric strong { font-size: 22px; }
   .panel { padding: 15px; }

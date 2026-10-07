@@ -252,6 +252,20 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .gallery-thumbnails button[aria-pressed='true'] { border-color: var(--cyan); opacity: 1; }
 .gallery-thumbnails img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
 .gallery-count { margin: 10px 0 0; color: #718892; font-size: 9px; text-align: center; }
+.feedback-dialog { width: min(560px, calc(100vw - 28px)); max-width: none; max-height: min(800px, calc(100dvh - 28px)); padding: 0; overflow: auto; border: 1px solid rgba(101, 230, 227, .3); background: #09151e; color: var(--paper); box-shadow: 0 28px 90px rgba(0, 0, 0, .64); }
+.feedback-dialog::backdrop { background: rgba(3, 9, 14, .82); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.feedback-form { display: grid; gap: 10px; padding: clamp(17px, 4vw, 27px); }
+.feedback-form .gallery-header { margin-bottom: 8px; }
+.feedback-form label { color: #c6d5da; font-size: 11px; font-weight: 700; }
+.feedback-form select, .feedback-form textarea { width: 100%; border: 1px solid var(--line); border-radius: 6px; background: #071019; color: var(--paper); font: inherit; }
+.feedback-form select { min-height: 44px; padding: 0 11px; }
+.feedback-form textarea { min-height: 128px; padding: 11px; resize: vertical; }
+.feedback-form :is(select, textarea):focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.feedback-privacy, .feedback-status { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.feedback-status { color: var(--cyan); }
+.feedback-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 4px; }
+.footer-feedback-link { padding: 8px; border: 0; background: transparent; color: #91a7af; cursor: pointer; font-size: 8px; font-weight: 700; }
+.footer-feedback-link:hover { color: var(--cyan); }
 .empty-state { display: grid; justify-items: center; padding: 48px 20px 65px; text-align: center; animation: arrive-up .3s ease both; }
 .empty-orbit { display: grid; width: 62px; height: 62px; place-items: center; border: 1px solid rgba(101, 230, 227, .35); border-radius: 50%; box-shadow: 0 0 28px rgba(23, 201, 255, .08); }
 .empty-orbit img { display: block; width: 52px; height: 52px; object-fit: contain; }

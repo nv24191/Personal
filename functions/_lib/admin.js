@@ -1,3 +1,10 @@
+import {
+  normalizeFeedback,
+  validateAdminNotes,
+  validateFeedbackStatus,
+  validateFeedbackSubmission,
+} from './feedback.js';
+
 const cookieName = 'octo_admin_session';
 const sessionMs = 8 * 60 * 60 * 1000;
 const allowedFields = new Set(['title', 'description', 'category', 'tags', 'featured']);
@@ -154,6 +161,34 @@ async function requireSession(request, env, url) {
   ).bind(session.tokenHash, Date.now(), Date.now() - 60_000, Date.now() - 60_000).first();
   if (count.request_count > 120) return { response: json({ error: 'Too many admin requests. Wait a minute and try again.' }, 429) };
   return { session };
+}
+
+export async function handleFeedback(request, env) {
+  const url = new URL(request.url);
+  if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, { Allow: 'POST' });
+  if (!sameOrigin(request, url)) return json({ error: 'Cross-origin feedback submissions are not allowed.' }, 403);
+  const body = await bodyJson(request);
+  const state = await loadState(request, env);
+  const validated = validateFeedbackSubmission(body, state.games);
+  const nowMs = Date.now();
+  const address = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const day = new Date(nowMs).toISOString().slice(0, 10);
+  const clientKey = await digest(`${day}:${address}`);
+  await env.ADMIN_DB.prepare('DELETE FROM feedback_rate_limits WHERE window_start < ?')
+    .bind(nowMs - 48 * 60 * 60 * 1000).run();
+  const limit = await env.ADMIN_DB.prepare(
+    'INSERT INTO feedback_rate_limits (client_key, window_start, request_count) VALUES (?, ?, 1) ON CONFLICT(client_key) DO UPDATE SET request_count = CASE WHEN window_start < ? THEN 1 ELSE request_count + 1 END, window_start = CASE WHEN window_start < ? THEN excluded.window_start ELSE window_start END RETURNING request_count',
+  ).bind(clientKey, nowMs, nowMs - 60 * 60 * 1000, nowMs - 60 * 60 * 1000).first();
+  if (!Number.isInteger(limit?.request_count)) throw new Error('The feedback rate limiter returned an invalid result.');
+  if (limit.request_count > 5) {
+    return json({ error: 'Too many submissions from this connection. Please try again later.' }, 429, { 'Retry-After': '3600' });
+  }
+  const now = new Date().toISOString();
+  const id = randomToken().slice(0, 32);
+  await env.ADMIN_DB.prepare(
+    'INSERT INTO feedback_submissions (id, type, game_id, message, device_info, status, admin_notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  ).bind(id, validated.type, validated.gameId, validated.message, JSON.stringify(validated.deviceInfo), 'new', '', now, now).run();
+  return json({ submitted: true }, 201);
 }
 
 async function login(request, env, url) {
@@ -357,6 +392,9 @@ export async function handleAdmin(request, env) {
   const state = await loadState(request, env);
   if (path === '/api/admin/dashboard' && request.method === 'GET') {
     const games = state.games;
+    const newFeedback = await env.ADMIN_DB.prepare(
+      "SELECT COUNT(*) AS count FROM feedback_submissions WHERE status = 'new'",
+    ).first();
     return json({
       counts: {
         total: games.length,
@@ -365,11 +403,48 @@ export async function handleAdmin(request, env) {
         offlineReady: games.filter((game) => game.offlineReady === true).length,
         needsAttention: games.filter((game) => game.status === 'needs-attention').length,
         failedJobs: state.jobs.filter((job) => job.status === 'failed').length,
+        newFeedback: newFeedback.count,
       },
       games,
       jobs: state.jobs.slice(0, 30),
       activity: state.activity.slice(0, 30),
     });
+  }
+  if (path === '/api/admin/feedback' && request.method === 'GET') {
+    const result = await env.ADMIN_DB.prepare('SELECT * FROM feedback_submissions ORDER BY created_at DESC').all();
+    return json((result.results || []).map(normalizeFeedback));
+  }
+  const feedbackMatch = /^\/api\/admin\/feedback\/([a-f\d]{32})(?:\/(status|notes))?$/.exec(path);
+  if (feedbackMatch && request.method === 'PATCH') {
+    const [, id, action] = feedbackMatch;
+    const existing = await env.ADMIN_DB.prepare('SELECT id FROM feedback_submissions WHERE id = ?').bind(id).first();
+    if (!existing) return json({ error: 'Feedback submission not found.' }, 404);
+    const body = await bodyJson(request);
+    if (action === 'notes') {
+      const notes = validateAdminNotes(body.adminNotes);
+      const updatedAt = new Date().toISOString();
+      await env.ADMIN_DB.prepare('UPDATE feedback_submissions SET admin_notes = ?, updated_at = ? WHERE id = ?')
+        .bind(notes, updatedAt, id).run();
+      return json({ id, adminNotes: notes, updatedAt });
+    }
+    const status = validateFeedbackStatus(body.status);
+    const updatedAt = new Date().toISOString();
+    await env.ADMIN_DB.prepare('UPDATE feedback_submissions SET status = ?, updated_at = ? WHERE id = ?')
+      .bind(status, updatedAt, id).run();
+    return json({ id, status, updatedAt });
+  }
+  if (path === '/api/admin/feedback/bulk' && request.method === 'POST') {
+    const body = await bodyJson(request);
+    if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 50
+      || body.ids.some((id) => typeof id !== 'string' || !/^[a-f\d]{32}$/.test(id))) {
+      return json({ error: 'Select between 1 and 50 valid feedback submissions.' }, 400);
+    }
+    const status = validateFeedbackStatus(body.status);
+    const ids = [...new Set(body.ids)];
+    await env.ADMIN_DB.prepare(
+      `UPDATE feedback_submissions SET status = ?, updated_at = ? WHERE id IN (${ids.map(() => '?').join(',')})`,
+    ).bind(status, new Date().toISOString(), ...ids).run();
+    return json({ updated: ids.length, status });
   }
   if (path === '/api/admin/chat' && request.method === 'POST') return chat(request, env, state);
   if (path === '/api/admin/analyze' && request.method === 'POST') {

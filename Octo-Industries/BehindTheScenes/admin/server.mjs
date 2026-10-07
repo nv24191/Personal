@@ -15,6 +15,12 @@ import {
   validateProposalSummary,
   validateProposalTitle,
 } from './change-proposals.mjs';
+import {
+  normalizeFeedback,
+  validateAdminNotes,
+  validateFeedbackStatus,
+  validateFeedbackSubmission,
+} from '../../../functions/_lib/feedback.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const project = resolve(root, 'Octo-Industries/BehindTheScenes');
@@ -27,6 +33,7 @@ const maximumBodyBytes = 96 * 1024;
 const sessions = new Map();
 const loginAttempts = new Map();
 const loginChallenges = new Map();
+const feedbackRateLimits = new Map();
 const cloudflareAccountId = process.env.CF_ACCOUNT_ID || '';
 const cloudflareDatabaseId = process.env.CF_D1_DATABASE_ID || '';
 const cloudflareApiToken = process.env.CF_D1_API_TOKEN || '';
@@ -107,6 +114,74 @@ async function d1Query(sql, params = []) {
   return queryResult || { success: true, results: [] };
 }
 
+async function feedbackRows() {
+  if (remoteD1Configured) {
+    const result = await d1Query('SELECT * FROM feedback_submissions ORDER BY created_at DESC');
+    return (result.results || []).map(normalizeFeedback);
+  }
+  state.feedback = Array.isArray(state.feedback) ? state.feedback : [];
+  return state.feedback;
+}
+
+async function insertFeedback(feedback) {
+  if (remoteD1Configured) {
+    await d1Query(
+      'INSERT INTO feedback_submissions (id, type, game_id, message, device_info, status, admin_notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [feedback.id, feedback.type, feedback.gameId, feedback.message, JSON.stringify(feedback.deviceInfo), feedback.status,
+        feedback.adminNotes, feedback.createdAt, feedback.updatedAt],
+    );
+  } else {
+    state.feedback = Array.isArray(state.feedback) ? state.feedback : [];
+    state.feedback.unshift(feedback);
+    await saveState();
+  }
+}
+
+async function updateFeedback(id, updates) {
+  const updatedAt = new Date().toISOString();
+  if (remoteD1Configured) {
+    const columns = { status: 'status', adminNotes: 'admin_notes' };
+    const entries = Object.entries(updates).map(([field, value]) => [columns[field], value]);
+    const assignments = entries.map(([field]) => `${field} = ?`).join(', ');
+    await d1Query(`UPDATE feedback_submissions SET ${assignments}, updated_at = ? WHERE id = ?`,
+      [...entries.map(([, value]) => value), updatedAt, id]);
+    return updatedAt;
+  }
+  const feedback = (state.feedback || []).find((entry) => entry.id === id);
+  if (!feedback) return false;
+  Object.assign(feedback, updates, { updatedAt });
+  await saveState();
+  return updatedAt;
+}
+
+async function rateLimitFeedback(request) {
+  const now = Date.now();
+  const address = request.socket.remoteAddress || 'unknown';
+  const day = new Date(now).toISOString().slice(0, 10);
+  const clientKey = createHash('sha256').update(`${day}:${address}`).digest('hex');
+  if (remoteD1Configured) {
+    await d1Query('DELETE FROM feedback_rate_limits WHERE window_start < ?', [now - 48 * 60 * 60 * 1000]);
+    const result = await d1Query(
+      'INSERT INTO feedback_rate_limits (client_key, window_start, request_count) VALUES (?, ?, 1) ON CONFLICT(client_key) DO UPDATE SET request_count = CASE WHEN window_start < ? THEN 1 ELSE request_count + 1 END, window_start = CASE WHEN window_start < ? THEN excluded.window_start ELSE window_start END RETURNING request_count',
+      [clientKey, now, now - 60 * 60 * 1000, now - 60 * 60 * 1000],
+    );
+    const count = result.results?.[0]?.request_count;
+    if (!Number.isInteger(count)) throw new Error('The feedback rate limiter returned an invalid result.');
+    return count <= 5;
+  }
+  if (feedbackRateLimits.size > 10_000) {
+    for (const [key, limit] of feedbackRateLimits) {
+      if (now - limit.windowStart >= 48 * 60 * 60 * 1000) feedbackRateLimits.delete(key);
+    }
+  }
+  const previous = feedbackRateLimits.get(clientKey);
+  const next = !previous || now - previous.windowStart >= 60 * 60 * 1000
+    ? { windowStart: now, count: 1 }
+    : { ...previous, count: previous.count + 1 };
+  feedbackRateLimits.set(clientKey, next);
+  return next.count <= 5;
+}
+
 async function loadState() {
   let catalog;
   try {
@@ -132,6 +207,10 @@ async function loadState() {
         state.proposals = [];
         changed = true;
       }
+      if (!Array.isArray(state.feedback)) {
+        state.feedback = [];
+        changed = true;
+      }
       const existingIds = new Set(state.games.map((game) => game.id));
       for (const game of catalog) {
         if (!existingIds.has(game.id)) {
@@ -147,11 +226,12 @@ async function loadState() {
         }
       }
     } else {
-      state = { games: catalog.map((game) => ({ ...game, status: 'published' })), jobs: [], activity: [], proposals: [] };
+      state = { games: catalog.map((game) => ({ ...game, status: 'published' })), jobs: [], activity: [], proposals: [], feedback: [] };
       changed = true;
     }
     state.jobs = state.jobs.slice(-100);
     state.activity = state.activity.slice(-100);
+    state.feedback = Array.isArray(state.feedback) ? state.feedback : [];
     if (changed) await saveState();
     return;
   }
@@ -177,11 +257,14 @@ async function loadState() {
       games: catalog.map((game) => ({ ...game, status: 'published' })),
       jobs: [],
       activity: [],
+      proposals: [],
+      feedback: [],
     };
   }
   state.jobs = state.jobs.slice(-100);
   state.activity = state.activity.slice(-100);
   state.proposals = Array.isArray(state.proposals) ? state.proposals.slice(0, 20) : [];
+  state.feedback = Array.isArray(state.feedback) ? state.feedback : [];
   await saveState();
 }
 
@@ -704,6 +787,34 @@ async function handleRequest(request, response) {
     sendJson(response, 200, state.games.filter((game) => game.status === 'published').map(publicGame));
     return;
   }
+  if (pathname === '/api/feedback') {
+    if (request.method !== 'POST') {
+      sendJson(response, 405, { error: 'Method not allowed.' }, { Allow: 'POST' });
+      return;
+    }
+    if (!sameOrigin(request)) {
+      sendJson(response, 403, { error: 'Cross-origin feedback submissions are not allowed.' });
+      return;
+    }
+    const body = await readJson(request);
+    const validated = validateFeedbackSubmission(body, state.games);
+    if (!(await rateLimitFeedback(request))) {
+      sendJson(response, 429, { error: 'Too many submissions from this connection. Please try again later.' }, { 'Retry-After': '3600' });
+      return;
+    }
+    const now = new Date().toISOString();
+    const feedback = {
+      id: randomBytes(16).toString('hex'),
+      ...validated,
+      status: 'new',
+      adminNotes: '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    await insertFeedback(feedback);
+    sendJson(response, 201, { submitted: true });
+    return;
+  }
   if (request.method === 'GET' && pathname === '/masterstandalone.html') {
     try {
       if (!state.standaloneHtml || !state.standaloneCspHash) {
@@ -855,6 +966,7 @@ async function handleRequest(request, response) {
     if (pathname === '/api/admin/dashboard' && request.method === 'GET') {
       state.proposals = Array.isArray(state.proposals) ? state.proposals : [];
       const games = state.games;
+      const feedback = await feedbackRows();
       sendJson(response, 200, {
         counts: {
           total: games.length,
@@ -863,6 +975,7 @@ async function handleRequest(request, response) {
           offlineReady: games.filter((game) => game.offlineReady === true).length,
           needsAttention: games.filter((game) => game.status === 'needs-attention').length,
           failedJobs: state.jobs.filter((job) => job.status === 'failed').length,
+          newFeedback: feedback.filter((entry) => entry.status === 'new').length,
         },
         games,
         jobs: state.jobs.slice(0, 30),
@@ -870,6 +983,59 @@ async function handleRequest(request, response) {
         proposals: state.proposals.filter((proposal) => ['pending', 'approved'].includes(proposal.status)).slice(0, 20),
         capabilities: { changeProposals: Boolean(githubToken) },
       });
+      return;
+    }
+    if (pathname === '/api/admin/feedback' && request.method === 'GET') {
+      sendJson(response, 200, await feedbackRows());
+      return;
+    }
+    const feedbackMatch = /^\/api\/admin\/feedback\/([a-f\d]{32})(?:\/(status|notes))?$/.exec(pathname);
+    if (feedbackMatch && request.method === 'PATCH') {
+      const [, id, action] = feedbackMatch;
+      const feedback = (await feedbackRows()).find((entry) => entry.id === id);
+      if (!feedback) {
+        sendJson(response, 404, { error: 'Feedback submission not found.' });
+        return;
+      }
+      const body = await readJson(request);
+      if (action === 'notes') {
+        const adminNotes = validateAdminNotes(body.adminNotes);
+        const updatedAt = await updateFeedback(id, { adminNotes });
+        sendJson(response, 200, { id, adminNotes, updatedAt });
+        return;
+      }
+      if (!action || action === 'status') {
+        const status = validateFeedbackStatus(body.status);
+        const updatedAt = await updateFeedback(id, { status });
+        sendJson(response, 200, { id, status, updatedAt });
+        return;
+      }
+    }
+    if (pathname === '/api/admin/feedback/bulk' && request.method === 'POST') {
+      const body = await readJson(request);
+      if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 50
+        || body.ids.some((id) => typeof id !== 'string' || !/^[a-f\d]{32}$/.test(id))) {
+        sendJson(response, 400, { error: 'Select between 1 and 50 valid feedback submissions.' });
+        return;
+      }
+      const status = validateFeedbackStatus(body.status);
+      const records = await feedbackRows();
+      const ids = [...new Set(body.ids)].filter((id) => records.some((entry) => entry.id === id));
+      const updatedAt = new Date().toISOString();
+      if (remoteD1Configured && ids.length) {
+        await d1Query(
+          `UPDATE feedback_submissions SET status = ?, updated_at = ? WHERE id IN (${ids.map(() => '?').join(',')})`,
+          [status, updatedAt, ...ids],
+        );
+      } else if (ids.length) {
+        for (const id of ids) {
+          const record = records.find((entry) => entry.id === id);
+          record.status = status;
+          record.updatedAt = updatedAt;
+        }
+        await saveState();
+      }
+      sendJson(response, 200, { updated: ids.length, status });
       return;
     }
     const proposalMatch = /^\/api\/admin\/proposals\/([a-f\d]{20})\/(approve|dismiss)$/.exec(pathname);

@@ -45,6 +45,31 @@
         <article class="metric"><span>Failed jobs</span><strong id="metric-failed">—</strong></article>
       </section>
 
+      <section class="panel feedback-inbox" aria-labelledby="feedback-inbox-title">
+        <div class="section-heading"><div><p class="eyebrow">PRIVATE INBOX</p><h2 id="feedback-inbox-title">Suggestions &amp; Issues <span class="feedback-new-badge" id="feedback-new-count">0 New</span></h2></div></div>
+        <div class="feedback-toolbar">
+          <label class="visually-hidden" for="feedback-search">Search feedback</label>
+          <input type="search" id="feedback-search" placeholder="Search message, game, type, or device">
+          <label class="visually-hidden" for="feedback-type-filter">Filter by type</label>
+          <select id="feedback-type-filter"><option value="all">All types</option><option value="issue">Issues</option><option value="suggestion">Suggestions</option></select>
+          <label class="visually-hidden" for="feedback-status-filter">Filter by status</label>
+          <select id="feedback-status-filter"><option value="all">All statuses</option><option value="new">New</option><option value="seen">Seen</option><option value="working">Working on it</option><option value="resolved">Resolved</option><option value="important">Important</option><option value="archived">Archived</option></select>
+          <label class="visually-hidden" for="feedback-game-filter">Filter by game</label>
+          <select id="feedback-game-filter"><option value="all">All games</option><option value="none">Not related to a game</option></select>
+          <label class="visually-hidden" for="feedback-sort">Sort feedback</label>
+          <select id="feedback-sort"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="updated">Recently updated</option><option value="status">Status</option><option value="type">Type</option><option value="game">Game</option></select>
+        </div>
+        <div class="feedback-bulk">
+          <label class="check-label"><input id="feedback-select-all" type="checkbox"> Select visible</label>
+          <label class="visually-hidden" for="feedback-bulk-status">Set selected submissions status</label>
+          <select id="feedback-bulk-status"><option value="">Bulk status…</option><option value="new">New</option><option value="seen">Seen</option><option value="working">Working on it</option><option value="resolved">Resolved</option><option value="important">Important</option><option value="archived">Archived</option></select>
+          <button class="small-button" id="feedback-bulk-apply" type="button">Apply to selected</button>
+          <span class="subtle" id="feedback-selection-count"></span>
+          <span class="subtle">50 per bulk action max</span>
+        </div>
+        <div class="feedback-list" id="feedback-list" aria-live="polite"></div>
+      </section>
+
       <section class="panel agent-panel" aria-labelledby="agent-title">
         <div class="section-heading"><div><p class="eyebrow">OCTO GAME INSPECTOR</p><h2 id="agent-title">Inspect a game page</h2></div><span class="mode-badge">Source scan</span></div>
         <p class="muted">Inspect only a game page you are authorized to access. This bounded source scan lists page resources; it does not download or alter game files, or test gameplay or offline behavior.</p>

@@ -118,6 +118,7 @@ test('admin service protects and manages the canonical library', async (t) => {
   assert.equal(hiddenFile.status, 404);
   const unauthorized = await fetch(`${baseUrl}/api/admin/dashboard`);
   assert.equal(unauthorized.status, 401);
+  assert.equal((await fetch(`${baseUrl}/api/admin/feedback`)).status, 401);
 
   const badLogin = await submitLogin(baseUrl, 'incorrect');
   assert.equal(badLogin.status, 401);
@@ -129,6 +130,64 @@ test('admin service protects and manages the canonical library', async (t) => {
   const cookie = login.headers.get('set-cookie').split(';', 1)[0];
   const headers = { Cookie: cookie };
   const writeHeaders = { ...headers, Origin: baseUrl, 'X-CSRF-Token': session.csrfToken, 'Content-Type': 'application/json' };
+
+  const initialCatalog = await (await fetch(`${baseUrl}/api/catalog`)).json();
+  const feedbackResponse = await fetch(`${baseUrl}/api/feedback`, {
+    method: 'POST',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'issue',
+      gameId: initialCatalog[0].id,
+      message: 'The game freezes in fullscreen.',
+      deviceInfo: {
+        deviceType: 'Desktop',
+        operatingSystem: 'Windows',
+        browser: 'Chrome',
+        screenResolution: '1920 × 1080',
+        octoVersion: 'test-build',
+        userAgent: 'must not be stored',
+      },
+    }),
+  });
+  assert.equal(feedbackResponse.status, 201);
+  const secondFeedbackResponse = await fetch(`${baseUrl}/api/feedback`, {
+    method: 'POST',
+    headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'suggestion', message: 'Add more puzzle games.' }),
+  });
+  assert.equal(secondFeedbackResponse.status, 201);
+  assert.equal((await fetch(`${baseUrl}/api/feedback`)).status, 405);
+  const feedbackResponseList = await fetch(`${baseUrl}/api/admin/feedback`, { headers });
+  assert.equal(feedbackResponseList.status, 200);
+  const feedbackItems = await feedbackResponseList.json();
+  assert.equal(feedbackItems.length, 2);
+  const issueFeedback = feedbackItems.find((entry) => entry.type === 'issue');
+  assert.equal(issueFeedback.status, 'new');
+  assert.equal(issueFeedback.gameId, initialCatalog[0].id);
+  assert.equal(issueFeedback.deviceInfo.userAgent, undefined);
+  assert.equal(issueFeedback.deviceInfo.browser, 'Chrome');
+  assert.ok(Number.isFinite(Date.parse(issueFeedback.createdAt)));
+  const markSeen = await fetch(`${baseUrl}/api/admin/feedback/${issueFeedback.id}/status`, {
+    method: 'PATCH',
+    headers: writeHeaders,
+    body: JSON.stringify({ status: 'seen' }),
+  });
+  assert.equal(markSeen.status, 200);
+  const saveNotes = await fetch(`${baseUrl}/api/admin/feedback/${issueFeedback.id}/notes`, {
+    method: 'PATCH',
+    headers: writeHeaders,
+    body: JSON.stringify({ adminNotes: 'Test this on desktop Chrome.' }),
+  });
+  assert.equal(saveNotes.status, 200);
+  const bulkArchive = await fetch(`${baseUrl}/api/admin/feedback/bulk`, {
+    method: 'POST',
+    headers: writeHeaders,
+    body: JSON.stringify({ ids: feedbackItems.map((entry) => entry.id), status: 'archived' }),
+  });
+  assert.equal(bulkArchive.status, 200);
+  const archivedFeedback = await (await fetch(`${baseUrl}/api/admin/feedback`, { headers })).json();
+  assert.ok(archivedFeedback.every((entry) => entry.status === 'archived'));
+  assert.equal(archivedFeedback.find((entry) => entry.id === issueFeedback.id).adminNotes, 'Test this on desktop Chrome.');
 
   const unauthenticatedChat = await fetch(`${baseUrl}/api/admin/chat`, {
     method: 'POST',
