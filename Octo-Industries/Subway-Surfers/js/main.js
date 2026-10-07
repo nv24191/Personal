@@ -13200,7 +13200,10 @@
               this.game && this.game.updateTicker(t), this.renderer.render(this.stage);
             }),
             (i.updateAnimFrame = function (t) {
-              requestAnimationFrame(this.updateAnimFrameBind), this.game && this.game.updateAnimFrame(t), this.renderer.render(this.stage);
+              requestAnimationFrame(this.updateAnimFrameBind);
+              var e = 1e3 / B.fps;
+              if (void 0 !== this._lastFrameTime && t - this._lastFrameTime < e) return;
+              (this._lastFrameTime = t), this.game && this.game.updateAnimFrame(t), this.renderer.render(this.stage);
             }),
             (i.addScreen = function (t, e) {
               (this[t + "Screen"] = e), "loading" === t ? (this.screenManager.loadingScreen = e) : this.screenManager.addScreen(e, t);
