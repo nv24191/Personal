@@ -16,6 +16,7 @@ import {
   validateProposalTitle,
 } from './change-proposals.mjs';
 import {
+  feedbackSchemaStatements,
   normalizeFeedback,
   validateAdminNotes,
   validateFeedbackStatus,
@@ -34,6 +35,7 @@ const sessions = new Map();
 const loginAttempts = new Map();
 const loginChallenges = new Map();
 const feedbackRateLimits = new Map();
+let feedbackSchemaInitialization;
 const cloudflareAccountId = process.env.CF_ACCOUNT_ID || '';
 const cloudflareDatabaseId = process.env.CF_D1_DATABASE_ID || '';
 const cloudflareApiToken = process.env.CF_D1_API_TOKEN || '';
@@ -114,6 +116,21 @@ async function d1Query(sql, params = []) {
   return queryResult || { success: true, results: [] };
 }
 
+async function ensureFeedbackSchema() {
+  if (!remoteD1Configured) return;
+  if (!feedbackSchemaInitialization) {
+    feedbackSchemaInitialization = (async () => {
+      for (const sql of feedbackSchemaStatements) await d1Query(sql);
+    })();
+  }
+  try {
+    await feedbackSchemaInitialization;
+  } catch (error) {
+    feedbackSchemaInitialization = null;
+    throw error;
+  }
+}
+
 async function feedbackRows() {
   if (remoteD1Configured) {
     const result = await d1Query('SELECT * FROM feedback_submissions ORDER BY created_at DESC');
@@ -160,6 +177,7 @@ async function rateLimitFeedback(request) {
   const day = new Date(now).toISOString().slice(0, 10);
   const clientKey = createHash('sha256').update(`${day}:${address}`).digest('hex');
   if (remoteD1Configured) {
+    await ensureFeedbackSchema();
     await d1Query('DELETE FROM feedback_rate_limits WHERE window_start < ?', [now - 48 * 60 * 60 * 1000]);
     const result = await d1Query(
       'INSERT INTO feedback_rate_limits (client_key, window_start, request_count) VALUES (?, ?, 1) ON CONFLICT(client_key) DO UPDATE SET request_count = CASE WHEN window_start < ? THEN 1 ELSE request_count + 1 END, window_start = CASE WHEN window_start < ? THEN excluded.window_start ELSE window_start END RETURNING request_count',
@@ -796,6 +814,7 @@ async function handleRequest(request, response) {
       sendJson(response, 403, { error: 'Cross-origin feedback submissions are not allowed.' });
       return;
     }
+    await ensureFeedbackSchema();
     const body = await readJson(request);
     const validated = validateFeedbackSubmission(body, state.games);
     if (!(await rateLimitFeedback(request))) {
@@ -964,6 +983,7 @@ async function handleRequest(request, response) {
       return;
     }
     if (pathname === '/api/admin/dashboard' && request.method === 'GET') {
+      await ensureFeedbackSchema();
       state.proposals = Array.isArray(state.proposals) ? state.proposals : [];
       const games = state.games;
       const feedback = await feedbackRows();
@@ -986,11 +1006,13 @@ async function handleRequest(request, response) {
       return;
     }
     if (pathname === '/api/admin/feedback' && request.method === 'GET') {
+      await ensureFeedbackSchema();
       sendJson(response, 200, await feedbackRows());
       return;
     }
     const feedbackMatch = /^\/api\/admin\/feedback\/([a-f\d]{32})(?:\/(status|notes))?$/.exec(pathname);
     if (feedbackMatch && request.method === 'PATCH') {
+      await ensureFeedbackSchema();
       const [, id, action] = feedbackMatch;
       const feedback = (await feedbackRows()).find((entry) => entry.id === id);
       if (!feedback) {
@@ -1012,6 +1034,7 @@ async function handleRequest(request, response) {
       }
     }
     if (pathname === '/api/admin/feedback/bulk' && request.method === 'POST') {
+      await ensureFeedbackSchema();
       const body = await readJson(request);
       if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 50
         || body.ids.some((id) => typeof id !== 'string' || !/^[a-f\d]{32}$/.test(id))) {

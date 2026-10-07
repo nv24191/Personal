@@ -1,4 +1,5 @@
 import {
+  ensureFeedbackSchema,
   normalizeFeedback,
   validateAdminNotes,
   validateFeedbackStatus,
@@ -167,6 +168,7 @@ export async function handleFeedback(request, env) {
   const url = new URL(request.url);
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405, { Allow: 'POST' });
   if (!sameOrigin(request, url)) return json({ error: 'Cross-origin feedback submissions are not allowed.' }, 403);
+  await ensureFeedbackSchema(env.ADMIN_DB);
   const body = await bodyJson(request);
   const state = await loadState(request, env);
   const validated = validateFeedbackSubmission(body, state.games);
@@ -388,6 +390,9 @@ export async function handleAdmin(request, env) {
   if (path === '/api/admin/logout' && request.method === 'POST') {
     await env.ADMIN_DB.prepare('DELETE FROM admin_sessions WHERE token_hash = ?').bind(session.tokenHash).run();
     return json({ authenticated: false }, 200, { 'Set-Cookie': sessionCookie('', 0) });
+  }
+  if (path === '/api/admin/dashboard' || path.startsWith('/api/admin/feedback')) {
+    await ensureFeedbackSchema(env.ADMIN_DB);
   }
   const state = await loadState(request, env);
   if (path === '/api/admin/dashboard' && request.method === 'GET') {

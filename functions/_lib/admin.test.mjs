@@ -21,6 +21,7 @@ class MemoryDatabase {
     this.rateLimits = new Map();
     this.feedbackRateLimits = new Map();
     this.feedback = new Map();
+    this.schemaInitializationCalls = 0;
   }
 
   prepare(sql) {
@@ -84,7 +85,10 @@ class MemoryStatement {
 
   async run() {
     const { database, sql, values } = this;
-    if (sql.startsWith('INSERT OR IGNORE INTO admin_state')) {
+    if (sql.startsWith('CREATE TABLE IF NOT EXISTS') || sql.startsWith('CREATE INDEX IF NOT EXISTS')) {
+      database.schemaInitializationCalls += 1;
+      return { success: true };
+    } else if (sql.startsWith('INSERT OR IGNORE INTO admin_state')) {
       database.state ??= values[0];
     } else if (sql.startsWith('UPDATE admin_state')) {
       database.state = values[0];
@@ -156,6 +160,7 @@ test('Cloudflare admin login, CSRF protection, catalog edits, and logout', async
     body: JSON.stringify({ type: 'suggestion', message: 'Add a new puzzle game.', deviceInfo: { browser: 'Firefox', userAgent: 'do not store' } }),
   }), env);
   assert.equal(publicSubmission.status, 201);
+  assert.equal(env.ADMIN_DB.schemaInitializationCalls, 4);
   const crossOriginSubmission = await handleFeedback(new Request(`${baseUrl}/api/feedback`, {
     method: 'POST',
     headers: { Origin: 'https://other.example', 'Content-Type': 'application/json' },
@@ -212,6 +217,7 @@ test('Cloudflare admin login, CSRF protection, catalog edits, and logout', async
   assert.equal(issueSubmission.status, 201);
   const inbox = await handleAdmin(new Request(`${baseUrl}/api/admin/feedback`, { headers: { Cookie: cookie } }), env);
   assert.equal(inbox.status, 200);
+  assert.equal(env.ADMIN_DB.schemaInitializationCalls, 4);
   const submissions = await inbox.json();
   assert.equal(submissions.length, 2);
   assert.ok(submissions.every((entry) => entry.status === 'new'));
