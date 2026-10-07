@@ -16,6 +16,128 @@ function escapeHtml(value = '') {
   })[character]);
 }
 
+function appendChatInline(parent, text) {
+  const tokenPattern = /(\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_|~~[^~\n]+~~|`[^`\n]+`|\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))/g;
+  let offset = 0;
+  for (const match of text.matchAll(tokenPattern)) {
+    const [token] = match;
+    const start = match.index;
+    parent.append(document.createTextNode(text.slice(offset, start)));
+    let element;
+    let content;
+    if (token.startsWith('**') || token.startsWith('__')) {
+      element = document.createElement('strong');
+      content = token.slice(2, -2);
+    } else if (token.startsWith('*') || token.startsWith('_')) {
+      element = document.createElement('em');
+      content = token.slice(1, -1);
+    } else if (token.startsWith('~~')) {
+      element = document.createElement('del');
+      content = token.slice(2, -2);
+    } else if (token.startsWith('`')) {
+      element = document.createElement('code');
+      content = token.slice(1, -1);
+    } else {
+      const link = /^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/.exec(token);
+      const url = new URL(link[2]);
+      element = document.createElement('a');
+      element.href = url.href;
+      element.target = '_blank';
+      element.rel = 'noopener noreferrer';
+      content = link[1];
+    }
+    element.textContent = content;
+    parent.append(element);
+    offset = start + token.length;
+  }
+  parent.append(document.createTextNode(text.slice(offset)));
+}
+
+function renderChatMarkdown(text) {
+  const fragment = document.createDocumentFragment();
+  const lines = text.split(/\r?\n/);
+  let paragraph = [];
+  let list = null;
+  let codeLines = null;
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    const block = document.createElement('p');
+    paragraph.forEach((line, index) => {
+      if (index) block.append(document.createElement('br'));
+      appendChatInline(block, line);
+    });
+    fragment.append(block);
+    paragraph = [];
+  };
+  const closeList = () => {
+    list = null;
+  };
+
+  for (const line of lines) {
+    if (line.trim().startsWith('```')) {
+      flushParagraph();
+      closeList();
+      if (codeLines) {
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.textContent = codeLines.join('\n');
+        pre.append(code);
+        fragment.append(pre);
+        codeLines = null;
+      } else {
+        codeLines = [];
+      }
+      continue;
+    }
+    if (codeLines) {
+      codeLines.push(line);
+      continue;
+    }
+    if (!line.trim()) {
+      flushParagraph();
+      closeList();
+      continue;
+    }
+
+    const heading = /^(#{1,3})\s+(.+)$/.exec(line);
+    if (heading) {
+      flushParagraph();
+      closeList();
+      const title = document.createElement(`h${heading[1].length + 2}`);
+      appendChatInline(title, heading[2]);
+      fragment.append(title);
+      continue;
+    }
+
+    const item = /^\s*([-*+]|\d+[.)])\s+(.+)$/.exec(line);
+    if (item) {
+      flushParagraph();
+      const ordered = /^\d/.test(item[1]);
+      if (!list || list.tagName === (ordered ? 'UL' : 'OL')) {
+        list = document.createElement(ordered ? 'ol' : 'ul');
+        fragment.append(list);
+      }
+      const entry = document.createElement('li');
+      appendChatInline(entry, item[2]);
+      list.append(entry);
+      continue;
+    }
+
+    closeList();
+    paragraph.push(line);
+  }
+  flushParagraph();
+  if (codeLines) {
+    const pre = document.createElement('pre');
+    const code = document.createElement('code');
+    code.textContent = codeLines.join('\n');
+    pre.append(code);
+    fragment.append(pre);
+  }
+  return fragment;
+}
+
 async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   if (options.body !== undefined) headers.set('Content-Type', 'application/json');
@@ -223,7 +345,8 @@ function renderChat() {
     const bubble = document.createElement('div');
     bubble.className = 'chat-message';
     bubble.dataset.role = message.role;
-    bubble.textContent = message.content;
+    if (message.role === 'assistant') bubble.append(renderChatMarkdown(message.content));
+    else bubble.textContent = message.content;
     transcript.append(bubble);
   }
   transcript.scrollTop = transcript.scrollHeight;

@@ -740,7 +740,7 @@ async function handleRequest(request, response) {
         recentActivity: state.activity.slice(0, 10),
       };
       let providerResponse;
-      const model = process.env.OCTO_GEMINI_MODEL || 'gemini-2.5-flash';
+      const model = process.env.OCTO_GEMINI_MODEL || 'gemini-3.1-flash-lite';
       try {
         providerResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
           method: 'POST',
