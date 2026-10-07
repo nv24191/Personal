@@ -57,11 +57,16 @@
       </section>
 
       <section class="panel chat-panel" aria-labelledby="chat-title">
-        <div class="section-heading"><div><p class="eyebrow">OCTO AI GAME AGENT</p><h2 id="chat-title">Ask about your library</h2></div><span class="mode-badge">Read-only assistant</span></div>
-        <p class="muted">Ask about games, recent jobs, or what needs attention. Octo AI can read the catalog and recent activity, but cannot change games or run jobs.</p>
+        <div class="section-heading"><div><p class="eyebrow">OCTO AI GAME AGENT</p><h2 id="chat-title">Ask about your library</h2></div><span class="mode-badge">Changes need your approval</span></div>
+        <p class="muted">Ask Octo AI to investigate code issues or register a game whose files are already in the repository. It prepares a change for your review; only approval opens a GitHub pull request. It never merges or deploys changes.</p>
         <div class="chat-transcript" id="chat-transcript" role="log" aria-live="polite" aria-relevant="additions">
-          <p class="chat-empty">Try “Which games are not marked offline-ready?” or “What jobs need attention?”</p>
+          <p class="chat-empty">Try “Which games need attention?” or “Review the game hub code and propose a fix for [issue].”</p>
         </div>
+        <section class="proposal-review" id="proposal-review" aria-labelledby="proposal-review-title" hidden>
+          <h3 id="proposal-review-title">Changes waiting for your review</h3>
+          <div id="proposal-list"></div>
+        </section>
+        <p class="muted proposal-capability" id="proposal-capability" hidden>To enable approved changes, add a GitHub token to the Render service. The site only opens a pull request after your approval; it never merges.</p>
         <div class="chat-prompts" aria-label="Suggested questions">
           <button class="small-button" type="button" data-chat-prompt="Which published games are not marked offline-ready?">Offline status</button>
           <button class="small-button" type="button" data-chat-prompt="What recent jobs need attention?">Recent job issues</button>

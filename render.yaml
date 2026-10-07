@@ -18,3 +18,5 @@ services:
         value: 30379fff-1967-4f33-85d3-7df2627fe833
       - key: CF_D1_API_TOKEN
         sync: false
+      - key: GITHUB_TOKEN
+        sync: false

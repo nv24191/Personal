@@ -83,6 +83,7 @@ test('admin service protects and manages the canonical library', async (t) => {
       OCTO_DATA_DIR: dataDirectory,
       OCTO_ADMIN_PASSWORD_HASH: `pbkdf2$120000$${salt}$${digest}`,
       GEMINI_API_KEY: '',
+      GITHUB_TOKEN: '',
     },
     stdio: 'ignore',
   });
@@ -144,6 +145,20 @@ test('admin service protects and manages the canonical library', async (t) => {
   assert.equal(chatNotConfigured.status, 503);
   assert.match((await chatNotConfigured.json()).error, /GEMINI_API_KEY/);
 
+  const unauthenticatedApproval = await fetch(`${baseUrl}/api/admin/proposals/0123456789abcdef0123/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  assert.equal(unauthenticatedApproval.status, 401);
+
+  const approvalWithoutGitHubToken = await fetch(`${baseUrl}/api/admin/proposals/0123456789abcdef0123/approve`, {
+    method: 'POST',
+    headers: writeHeaders,
+    body: '{}',
+  });
+  assert.equal(approvalWithoutGitHubToken.status, 404);
+
   const forbidden = await fetch(`${baseUrl}/api/admin/build`, {
     method: 'POST',
     headers: { ...headers, Origin: baseUrl, 'Content-Type': 'application/json' },
@@ -155,6 +170,7 @@ test('admin service protects and manages the canonical library', async (t) => {
   assert.equal(dashboard.status, 200);
   const initial = await dashboard.json();
   assert.ok(initial.counts.total > 0);
+  assert.equal(initial.capabilities.changeProposals, false);
   const gameId = initial.games[0].id;
 
   const healthResponse = await fetch(`${baseUrl}/api/admin/games/${gameId}/health`, {

@@ -56,6 +56,20 @@ h2 { margin-bottom: 0; font-size: 22px; }
 .chat-message a { color: var(--cyan); text-decoration: underline; text-underline-offset: 2px; }
 .chat-message pre { max-width: 100%; overflow-x: auto; margin: 0 0 10px; padding: 10px; border-radius: 6px; background: #07131c; white-space: pre; }
 .chat-message code { font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", "Noto Sans Mono", monospace; font-size: .95em; }
+.proposal-review { display: grid; gap: 10px; margin-top: 12px; }
+.proposal-review h3 { margin: 0; font-size: 14px; }
+#proposal-list { display: grid; gap: 10px; }
+.proposal-card { display: grid; gap: 8px; padding: 14px; border: 1px solid rgba(101, 230, 227, .3); border-radius: 8px; background: rgba(18, 35, 45, .72); }
+.proposal-card h4, .proposal-card p { margin: 0; }
+.proposal-card h4 { font-size: 14px; }
+.proposal-card p { font-size: 12px; line-height: 1.55; }
+.proposal-meta { color: var(--muted); }
+.proposal-card details { min-width: 0; }
+.proposal-card summary { color: var(--cyan); cursor: pointer; font-size: 12px; }
+.proposal-card pre { max-height: 300px; overflow: auto; margin: 8px 0 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: #07131c; font: 11px/1.55 ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace; white-space: pre; }
+.proposal-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.proposal-approve { border-color: rgba(101, 230, 227, .4); color: var(--cyan); }
+.proposal-capability { margin-top: 10px; }
 .chat-message[data-role="user"] { justify-self: end; border-color: rgba(23, 201, 255, .28); background: rgba(23, 201, 255, .09); }
 .chat-message[data-role="assistant"] { justify-self: start; background: var(--panel-raised); }
 .chat-prompts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }

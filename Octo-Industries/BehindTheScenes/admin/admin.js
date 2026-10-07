@@ -261,12 +261,72 @@ function renderActivity() {
     : '<p class="muted">Admin actions will appear here.</p>';
 }
 
+function renderProposals() {
+  const section = document.querySelector('#proposal-review');
+  const container = document.querySelector('#proposal-list');
+  const proposals = (dashboard?.proposals || []).filter((proposal) => ['pending', 'approved'].includes(proposal.status));
+  section.hidden = proposals.length === 0;
+  document.querySelector('#proposal-capability').hidden = dashboard?.capabilities?.changeProposals !== false;
+  container.replaceChildren();
+  for (const proposal of proposals) {
+    const card = document.createElement('article');
+    card.className = 'proposal-card';
+    const heading = document.createElement('h4');
+    heading.textContent = proposal.title;
+    const summary = document.createElement('p');
+    summary.textContent = proposal.summary;
+    const meta = document.createElement('p');
+    meta.className = 'proposal-meta';
+    meta.textContent = `${proposal.kind === 'game' ? 'Game registration' : 'Code change'} · ${formatDate(proposal.createdAt)}`;
+    card.append(heading, meta, summary);
+
+    const details = document.createElement('details');
+    const label = document.createElement('summary');
+    label.textContent = proposal.kind === 'game' ? `Review ${proposal.manifestPath}` : 'Review proposed code diff';
+    const preview = document.createElement('pre');
+    preview.textContent = proposal.kind === 'game'
+      ? JSON.stringify(proposal.manifest, null, 2)
+      : proposal.diff;
+    details.append(label, preview);
+    card.append(details);
+
+    if (proposal.status === 'approved' && proposal.pullRequest?.url) {
+      const link = document.createElement('a');
+      link.className = 'small-button';
+      link.href = proposal.pullRequest.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = `Review GitHub pull request #${proposal.pullRequest.number}`;
+      card.append(link);
+    } else {
+      const actions = document.createElement('div');
+      actions.className = 'proposal-actions';
+      const approve = document.createElement('button');
+      approve.className = 'small-button proposal-approve';
+      approve.type = 'button';
+      approve.dataset.proposalAction = 'approve';
+      approve.dataset.proposalId = proposal.id;
+      approve.textContent = 'Approve and open GitHub PR';
+      const dismiss = document.createElement('button');
+      dismiss.className = 'small-button';
+      dismiss.type = 'button';
+      dismiss.dataset.proposalAction = 'dismiss';
+      dismiss.dataset.proposalId = proposal.id;
+      dismiss.textContent = 'Dismiss';
+      actions.append(approve, dismiss);
+      card.append(actions);
+    }
+    container.append(card);
+  }
+}
+
 async function refreshDashboard() {
   dashboard = await api('/api/admin/dashboard');
   updateMetrics(dashboard.counts);
   renderGames();
   renderJobs();
   renderActivity();
+  renderProposals();
   if (dashboard.jobs.some((job) => job.status === 'queued' || job.status === 'running')) {
     if (!refreshTimer) refreshTimer = setInterval(() => refreshDashboard().catch((error) => showToast(error.message)), 2200);
   } else {
@@ -372,6 +432,11 @@ document.querySelector('#chat-form').addEventListener('submit', async (event) =>
       body: JSON.stringify({ messages: chatHistory.slice(-20) }),
     });
     chatHistory.push({ role: 'assistant', content: result.answer });
+    if (result.proposal) {
+      dashboard.proposals.unshift(result.proposal);
+      dashboard.proposals = dashboard.proposals.slice(0, 20);
+      renderProposals();
+    }
     showMessage(status, '');
     renderChat();
   } catch (error) {
@@ -383,6 +448,22 @@ document.querySelector('#chat-form').addEventListener('submit', async (event) =>
     button.disabled = false;
     input.disabled = false;
     input.focus();
+  }
+});
+
+document.querySelector('#proposal-list').addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-proposal-action]');
+  if (!button) return;
+  const { proposalAction: action, proposalId: id } = button.dataset;
+  if (action === 'approve' && !window.confirm('Approve this exact proposal and open a GitHub pull request? It will not be merged or deployed.')) return;
+  button.disabled = true;
+  try {
+    await api(`/api/admin/proposals/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: '{}' });
+    if (action === 'approve') showToast('Pull request opened. Review it on GitHub before merging.');
+    await refreshDashboard();
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
   }
 });
 
