@@ -99,6 +99,16 @@ async function d1Query(sql, params = []) {
 
 async function loadState() {
   let catalog;
+  try {
+    const source = await fs.readFile(staticCatalogFile, 'utf8');
+    const match = /Object\.freeze\(([\s\S]*)\);\s*$/.exec(source);
+    if (!match) throw new Error('The generated game catalog has an invalid format.');
+    catalog = JSON.parse(match[1]);
+  } catch (error) {
+    throw new Error(`Unable to load the generated game catalog: ${error.message}`);
+  }
+  if (!Array.isArray(catalog)) throw new Error('The generated game catalog must be an array.');
+
   if (remoteD1Configured) {
     const result = await d1Query('SELECT value FROM admin_state WHERE id = 1');
     const stored = result.results?.[0]?.value;
@@ -131,16 +141,6 @@ async function loadState() {
     if (changed) await saveState();
     return;
   }
-
-  try {
-    const source = await fs.readFile(staticCatalogFile, 'utf8');
-    const match = /Object\.freeze\(([\s\S]*)\);\s*$/.exec(source);
-    if (!match) throw new Error('The generated game catalog has an invalid format.');
-    catalog = JSON.parse(match[1]);
-  } catch (error) {
-    throw new Error(`Unable to load the generated game catalog: ${error.message}`);
-  }
-  if (!Array.isArray(catalog)) throw new Error('The generated game catalog must be an array.');
 
   try {
     state = JSON.parse(await fs.readFile(stateFile, 'utf8'));
