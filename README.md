@@ -2,20 +2,28 @@
 
 # Octo Industries™ Game Hub
 
-Octo Industries is a static, touch-friendly game launcher. The repository-root `index.html` is the homepage and works with GitHub Pages, Codespaces, and other static hosts. No frontend framework or runtime service is required.
+Octo Industries is a touch-friendly game launcher with a Node.js service for the private admin panel and live catalog. The repository-root `index.html` remains the public homepage. The generated catalog still supports static previews, but secure admin access and live publishing require the Node service.
 
 ## Run the hub
 
 The project tools and hub source live together in `Octo-Industries/BehindTheScenes/`. In VS Code, open **Run and Debug**, select **Run Game Hub**, and press **F5**. This regenerates the game catalog, starts a local web server from the repository root, and opens the hub in your browser instead of trying to download the HTML file.
 
-Alternatively, from the repository root, generate the game catalog and start a local web server:
+To run the public-only static preview, generate the catalog and start a local web server:
 
 ```sh
 npm --prefix Octo-Industries/BehindTheScenes run sync
 python3 -m http.server 8080
 ```
 
-Open `http://localhost:8080/`. Run the server from the repository root, not from inside a game folder. The root page loads the hub assets from `Octo-Industries/BehindTheScenes/hub/`, links to each validated game entry point, and displays missing cover art with a local fallback.
+Open `http://localhost:8080/`. This preview does not provide the private admin API. To run the admin-capable service, generate an admin password hash in an interactive terminal, set the printed hash as `OCTO_ADMIN_PASSWORD_HASH`, and start the Node service:
+
+```sh
+npm --prefix Octo-Industries/BehindTheScenes run admin:hash
+export OCTO_ADMIN_PASSWORD_HASH='scrypt$...'
+npm --prefix Octo-Industries/BehindTheScenes start
+```
+
+Open `http://localhost:3000/admin`. Admin state is stored under `.octo-data/` locally; set `OCTO_DATA_DIR` to a persistent directory in hosted deployments. The hash is not the password, and the service refuses to start if it is missing or malformed.
 
 ## Discover and add games
 
@@ -39,11 +47,21 @@ The existing `Octo-Industries/BehindTheScenes/` folder contains the hub, scripts
 
 Every Play link opens the launch path from the generated catalog as a regular static route. The hub stores recently played game IDs in local browser storage; it does not require an account or send play history to a server.
 
+## Admin panel
+
+The Node service adds a server-authenticated `/admin` control room with password hashing (scrypt), expiring HTTP-only sessions, CSRF validation, same-origin checks, login throttling, audit events, and a persistent catalog overlay. Admin actions support editing game metadata, publishing/unpublishing catalog entries, queuing safe page-source scans and file/metadata checks, and generating a hub HTML build. Only published games appear in the live hub catalog.
+
+The dashboard includes the **Octo AI Game Agent**, powered by Google Gemini 2.5 Pro by default (override with `OCTO_GEMINI_MODEL`). Google AI Studio offers a free API tier for eligible models, but it has quotas and rate limits and model availability varies by project. The free-tier terms state that submitted content may be used to improve Google products; do not send secrets or sensitive personal information. It can answer questions about the game catalog, recent jobs, and admin activity. Its chat is read-only; the owner must use the explicit dashboard controls to edit or publish games. Configure the `GEMINI_API_KEY` secret in Render to enable responses. Never put the key in browser code or commit it. The app adds no separate chat-message quota, but Google's project rate limits and free-tier quotas still apply. Chat sends the current catalog and recent job/activity summaries to Google as context.
+
+The game URL scanner is intentionally a bounded source inspection: it blocks private/reserved IP ranges and non-standard ports, follows only a few redirects, and limits response size and time. It does not download or rewrite games, identify all runtime dependencies, run browser gameplay tests, verify rights, or establish offline readiness. "Offline verified" is only counted when explicitly present in the library data; the file health check does not claim gameplay or offline validation. Full preservation/download workflows, media approval, automated browser tests, and global branding controls are not implemented yet.
+
+The generated standalone hub embeds the current published catalog but uses the site's existing static CSS, JavaScript, and game files; it is not a self-contained bundle. It is available at `/masterstandalone.html` after the admin build job completes.
+
 ## Hosting
 
-The root `render.yaml` configures a Render Static Site to run the catalog sync and publish the repository root (`.`), where `index.html` lives. The build has no package dependencies; it uses Node.js to refresh `Octo-Industries/BehindTheScenes/hub/catalog.js` before the static files are published. Connect the repository to Render and use the Blueprint to apply these settings. Keep `index.html`, `Octo-Industries/`, and `render.yaml` together in the deployed branch.
+The root `render.yaml` configures a Render Node web service that runs the catalog sync and serves the public site, protected admin routes, and APIs. It attaches a persistent disk at `/var/data`. Connect the repository to Render and use the Blueprint to apply these settings. In the Render service settings, set `OCTO_ADMIN_PASSWORD_HASH` to the output of `npm --prefix Octo-Industries/BehindTheScenes run admin:hash` and add `GEMINI_API_KEY` from [Google AI Studio](https://aistudio.google.com/apikey). Both are secrets. Do not commit them or enter them in browser code. Keep `index.html`, `Octo-Industries/`, and `render.yaml` together in the deployed branch.
 
-Run `npm --prefix Octo-Industries/BehindTheScenes run sync` after changing game metadata or adding a game, and commit the generated `Octo-Industries/BehindTheScenes/hub/catalog.js` with the static site. The sync script validates game launch paths before writing the catalog.
+Run `npm --prefix Octo-Industries/BehindTheScenes run sync` after changing game metadata or adding a game, and commit the generated `Octo-Industries/BehindTheScenes/hub/catalog.js`. The sync script validates game launch paths before writing the catalog. The server persists admin changes on its data disk and merges newly discovered catalog entries at startup.
 
 ## Branding assets
 

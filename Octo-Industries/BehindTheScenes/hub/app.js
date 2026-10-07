@@ -1,5 +1,5 @@
-const games = Array.isArray(window.OCTO_GAMES) ? window.OCTO_GAMES : [];
-const byId = new Map(games.map((game) => [game.id, game]));
+let games = Array.isArray(window.OCTO_GAMES) ? [...window.OCTO_GAMES] : [];
+let byId = new Map(games.map((game) => [game.id, game]));
 const grid = document.querySelector('#game-grid');
 const searchInput = document.querySelector('#game-search');
 const categoryList = document.querySelector('#category-list');
@@ -391,4 +391,15 @@ function start() {
   }
 }
 
-start();
+async function loadPublicCatalog() {
+  const response = await fetch('/api/catalog', { headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`Catalog request failed (${response.status}).`);
+  const catalog = await response.json();
+  if (!Array.isArray(catalog)) throw new Error('The server returned an invalid game catalog.');
+  games = catalog;
+  byId = new Map(games.map((game) => [game.id, game]));
+}
+
+loadPublicCatalog()
+  .catch((error) => console.error('Unable to load the live game catalog; using the generated catalog instead.', error))
+  .finally(start);

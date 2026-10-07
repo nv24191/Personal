@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071019">
+  <title>Octo Industries Admin</title>
+  <link rel="icon" href="/Octo-Industries/branding/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/admin/admin.js" defer></script>
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Octo Industries home"><img src="/Octo-Industries/branding/horizontal-logo.png" alt="Octo Industries"></a>
+      <div class="header-actions">
+        <a class="quiet-link" href="/">View public hub ↗</a>
+        <button class="button button-quiet" id="logout-button" type="button" hidden>Sign out</button>
+      </div>
+    </header>
+
+    <section class="login-card" id="login-view" aria-labelledby="login-title">
+      <p class="eyebrow">PRIVATE CONTROL ROOM</p>
+      <h1 id="login-title">Admin sign in</h1>
+      <p class="muted">Sign in to manage the Octo Industries game library.</p>
+      <form id="login-form">
+        <label for="password">Admin password</label>
+        <input id="password" type="password" autocomplete="current-password" required minlength="12">
+        <button class="button button-primary" type="submit">Sign in <span aria-hidden="true">→</span></button>
+      </form>
+      <p class="notice" id="login-message" role="alert" hidden></p>
+    </section>
+
+    <section id="dashboard-view" hidden>
+      <div class="welcome-row">
+        <div><p class="eyebrow">OCTO INDUSTRIES / ADMIN</p><h1>Library control room</h1><p class="muted">Review your catalog, inspect game pages, and track administrative jobs.</p></div>
+        <button class="button button-secondary" id="build-button" type="button">Build standalone hub <span aria-hidden="true">↗</span></button>
+      </div>
+
+      <section class="metrics" aria-label="Library summary">
+        <article class="metric"><span>All games</span><strong id="metric-total">—</strong></article>
+        <article class="metric"><span>Published</span><strong id="metric-published">—</strong></article>
+        <article class="metric"><span>Drafts</span><strong id="metric-drafts">—</strong></article>
+        <article class="metric"><span>Offline verified</span><strong id="metric-offline">—</strong></article>
+        <article class="metric"><span>Failed jobs</span><strong id="metric-failed">—</strong></article>
+      </section>
+
+      <section class="panel agent-panel" aria-labelledby="agent-title">
+        <div class="section-heading"><div><p class="eyebrow">OCTO GAME INSPECTOR</p><h2 id="agent-title">Inspect a game page</h2></div><span class="mode-badge">Source scan</span></div>
+        <p class="muted">Inspect only a game page you are authorized to access. This bounded source scan lists page resources; it is not an AI review, download, preservation, or gameplay/offline test.</p>
+        <form class="url-form" id="analyze-form">
+          <label class="visually-hidden" for="game-url">Authorized game page URL</label>
+          <input id="game-url" type="url" placeholder="https://example.com/game" autocomplete="url" required>
+          <button class="button button-primary" type="submit">Analyze page</button>
+        </form>
+        <p class="notice" id="agent-message" role="status" hidden></p>
+      </section>
+
+      <section class="panel chat-panel" aria-labelledby="chat-title">
+        <div class="section-heading"><div><p class="eyebrow">OCTO AI GAME AGENT</p><h2 id="chat-title">Ask about your library</h2></div><span class="mode-badge">Read-only assistant</span></div>
+        <p class="muted">Ask about games, recent jobs, or what needs attention. Octo AI can read the catalog and recent activity, but cannot change games or run jobs.</p>
+        <div class="chat-transcript" id="chat-transcript" role="log" aria-live="polite" aria-relevant="additions">
+          <p class="chat-empty">Try “Which games are not marked offline-ready?” or “What jobs need attention?”</p>
+        </div>
+        <div class="chat-prompts" aria-label="Suggested questions">
+          <button class="small-button" type="button" data-chat-prompt="Which published games are not marked offline-ready?">Offline status</button>
+          <button class="small-button" type="button" data-chat-prompt="What recent jobs need attention?">Recent job issues</button>
+          <button class="small-button" type="button" data-chat-prompt="How many games are published, and what can I manage here?">Library overview</button>
+        </div>
+        <form class="chat-form" id="chat-form">
+          <label class="visually-hidden" for="chat-input">Message Octo AI</label>
+          <textarea id="chat-input" rows="2" maxlength="4000" placeholder="Ask Octo AI about your game library…" required></textarea>
+          <button class="button button-primary" id="chat-send" type="submit">Send <span aria-hidden="true">↗</span></button>
+        </form>
+        <p class="notice" id="chat-message" role="status" hidden></p>
+      </section>
+
+      <div class="content-grid">
+        <section class="panel library-panel" aria-labelledby="library-title">
+          <div class="section-heading"><div><p class="eyebrow">CANONICAL LIBRARY</p><h2 id="library-title">Games</h2></div><span class="subtle" id="library-count"></span></div>
+          <div class="toolbar">
+            <label class="visually-hidden" for="game-filter">Search games</label>
+            <input type="search" id="game-filter" placeholder="Search games">
+            <label class="visually-hidden" for="status-filter">Filter by status</label>
+            <select id="status-filter"><option value="all">All statuses</option><option value="published">Published</option><option value="draft">Draft</option></select>
+          </div>
+          <div class="game-list" id="game-list"></div>
+        </section>
+        <aside class="side-column">
+          <section class="panel" aria-labelledby="jobs-title"><div class="section-heading"><div><p class="eyebrow">BACKGROUND TASKS</p><h2 id="jobs-title">Recent jobs</h2></div></div><div class="job-list" id="job-list"></div></section>
+          <section class="panel" aria-labelledby="activity-title"><div class="section-heading"><div><p class="eyebrow">AUDIT TRAIL</p><h2 id="activity-title">Admin activity</h2></div></div><div class="activity-list" id="activity-list"></div></section>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="edit-dialog" class="edit-dialog">
+    <form id="edit-form">
+      <div class="section-heading"><div><p class="eyebrow">LIBRARY METADATA</p><h2>Edit game</h2></div><button class="icon-button" type="button" id="close-dialog" aria-label="Close">×</button></div>
+      <input type="hidden" id="edit-id">
+      <label for="edit-title">Title</label><input id="edit-title" maxlength="120" required>
+      <label for="edit-category">Category</label><input id="edit-category" maxlength="120" required>
+      <label for="edit-tags">Tags <span class="subtle">(comma-separated)</span></label><input id="edit-tags" maxlength="1200">
+      <label for="edit-description">Description</label><textarea id="edit-description" maxlength="2000" rows="4" required></textarea>
+      <label class="check-label"><input id="edit-featured" type="checkbox"> Featured on the public hub</label>
+      <div class="dialog-actions"><button class="button button-quiet" type="button" id="cancel-edit">Cancel</button><button class="button button-primary" type="submit">Save metadata</button></div>
+      <p class="notice" id="edit-message" role="alert" hidden></p>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

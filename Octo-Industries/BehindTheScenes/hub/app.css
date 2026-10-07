@@ -271,6 +271,9 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .site-footer { display: flex; min-height: 86px; align-items: center; justify-content: space-between; gap: 20px; color: #71858d; font-size: 9px; }
 .footer-brand { display: inline-flex; align-items: center; }
 .footer-brand img { display: block; width: 190px; height: auto; }
+.footer-admin-link { display: inline-flex; min-height: 38px; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--line); color: #91a7af; font-size: 8px; font-weight: 700; transition: border-color .2s ease, color .2s ease; }
+.footer-admin-link:hover { border-color: rgba(101, 230, 227, .56); color: var(--cyan); }
+.footer-admin-link span { color: var(--cyan); font-size: 13px; }
 .back-to-top { display: inline-flex; min-height: 44px; align-items: center; gap: 9px; color: #91a7af; font-size: 8px; font-weight: 700; transition: color .2s ease; }
 .back-to-top:hover { color: var(--cyan); }
 .back-to-top span { color: var(--cyan); font-size: 14px; }

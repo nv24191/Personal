@@ -3,6 +3,9 @@
   "private": true,
   "scripts": {
     "sync": "node scripts/sync-games.mjs",
-    "build": "node scripts/sync-games.mjs"
+    "build": "node scripts/sync-games.mjs",
+    "start": "node admin/server.mjs",
+    "admin:hash": "node scripts/create-admin-hash.mjs",
+    "test": "node --test"
   }
 }
