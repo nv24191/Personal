@@ -4,21 +4,35 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const gameDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '../../Baggio-Magical-Kicks');
-const output = resolve(gameDirectory, 'games/baggio-magical-kicks.swf');
-const source = 'https://www.footballgames.org/wp-content/games/baggio-magical-kicks.swf';
-const expectedHash = '77B70319804B05FF9B59AD8724D675F6A384F0295684C74FE50F06CFD3D72F4E';
-const expectedSize = 309221;
+const assets = [
+  {
+    output: resolve(gameDirectory, 'games/baggio-magical-kicks.swf'),
+    source: 'https://www.footballgames.org/wp-content/games/baggio-magical-kicks.swf',
+    expectedHash: '77B70319804B05FF9B59AD8724D675F6A384F0295684C74FE50F06CFD3D72F4E',
+    expectedSize: 309221,
+    signature: 'CWS',
+    name: 'original Baggio Magical Kicks SWF',
+  },
+  {
+    output: resolve(gameDirectory, 'hub/banner-source.jpg'),
+    source: 'https://footballgames.b-cdn.net/wp-content/thumbs/baggio-magical-kicks.jpg',
+    expectedHash: '0AAC7E54A81AB6EB1B74FA66DA133E24B17237924F21FB4E1C5B7652B7B5D6C3',
+    expectedSize: 8253,
+    signature: '\xff\xd8\xff',
+    name: 'original Baggio game artwork',
+  },
+];
 const maximumSize = 1_000_000;
 
 function sha256(data) {
   return createHash('sha256').update(data).digest('hex').toUpperCase();
 }
 
-async function readExisting() {
+async function readExisting(asset) {
   try {
-    const data = await readFile(output);
-    if (sha256(data) !== expectedHash) {
-      throw new Error(`Existing Baggio SWF failed SHA-256 verification: ${output}`);
+    const data = await readFile(asset.output);
+    if (sha256(data) !== asset.expectedHash) {
+      throw new Error(`Existing ${asset.name} failed SHA-256 verification: ${asset.output}`);
     }
     return true;
   } catch (error) {
@@ -27,10 +41,10 @@ async function readExisting() {
   }
 }
 
-async function download() {
-  const response = await fetch(source, { signal: AbortSignal.timeout(30_000) });
+async function download(asset) {
+  const response = await fetch(asset.source, { signal: AbortSignal.timeout(30_000) });
   if (!response.ok || !response.body) {
-    throw new Error(`Could not download the original Baggio SWF (HTTP ${response.status}).`);
+    throw new Error(`Could not download ${asset.name} (HTTP ${response.status}).`);
   }
 
   const advertisedSize = Number(response.headers.get('content-length'));
@@ -53,22 +67,24 @@ async function download() {
   }
 
   const data = Buffer.concat(chunks, size);
-  if (data.length !== expectedSize || data.subarray(0, 3).toString('ascii') !== 'CWS') {
-    throw new Error('The downloaded Baggio file is not the expected compressed Flash 5 payload.');
+  if (data.length !== asset.expectedSize || data.subarray(0, 3).toString('binary') !== asset.signature) {
+    throw new Error(`The downloaded ${asset.name} did not match its expected size or file signature.`);
   }
-  if (sha256(data) !== expectedHash) {
-    throw new Error('The downloaded Baggio SWF failed SHA-256 verification.');
+  if (sha256(data) !== asset.expectedHash) {
+    throw new Error(`The downloaded ${asset.name} failed SHA-256 verification.`);
   }
 
-  await mkdir(dirname(output), { recursive: true });
-  const temporary = `${output}.${process.pid}.download`;
+  await mkdir(dirname(asset.output), { recursive: true });
+  const temporary = `${asset.output}.${process.pid}.download`;
   try {
     await writeFile(temporary, data, { flag: 'wx' });
-    await rename(temporary, output);
+    await rename(temporary, asset.output);
   } finally {
     await rm(temporary, { force: true });
   }
-  console.log('Downloaded and verified the original Baggio Magical Kicks SWF.');
+  console.log(`Downloaded and verified ${asset.name}.`);
 }
 
-if (!(await readExisting())) await download();
+for (const asset of assets) {
+  if (!(await readExisting(asset))) await download(asset);
+}

@@ -41,24 +41,165 @@
 
     .game {
       display: block;
-      width: min(960px, 100vw, calc((100dvh - 24px) * 4 / 3));
-      aspect-ratio: 4 / 3;
-      max-height: calc(100dvh - 24px);
+      width: min(96vw, 189.52dvh);
+      height: min(92dvh, 46.6vw);
+      aspect-ratio: 800 / 388;
     }
 
     @supports not (height: 100dvh) {
       .game {
-        width: min(960px, 100vw, calc((100vh - 24px) * 4 / 3));
-        max-height: calc(100vh - 24px);
+        width: min(96vw, 189.52vh);
+        height: min(92vh, 46.6vw);
       }
     }
+
+    .play-stats {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 10px);
+      right: calc(env(safe-area-inset-right, 0px) + 10px);
+      z-index: 20;
+      color: #eef8fb;
+      font: 13px/1.5 'Avenir Next', 'Segoe UI', sans-serif;
+      -webkit-user-select: auto;
+      user-select: auto;
+    }
+
+    .play-stats summary {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      place-items: center;
+      border: 1px solid rgba(101, 230, 227, .45);
+      border-radius: 50%;
+      background: rgba(12, 20, 30, .9);
+      color: #65e6e3;
+      cursor: pointer;
+      font-weight: 700;
+      list-style: none;
+      touch-action: manipulation;
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+    }
+
+    .play-stats summary::-webkit-details-marker { display: none; }
+    .play-stats summary:focus-visible { outline: 2px solid #65e6e3; outline-offset: 3px; }
+
+    .stats-card {
+      position: absolute;
+      top: 56px;
+      right: 0;
+      width: min(300px, calc(100vw - 24px));
+      padding: 16px;
+      border: 1px solid rgba(191, 221, 232, .2);
+      border-radius: 8px;
+      background: rgba(13, 25, 35, .97);
+      box-shadow: 0 14px 36px rgba(0, 0, 0, .35);
+    }
+
+    .stats-card h2 { margin: 0 0 12px; font-size: 16px; }
+    .stats-values { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; margin: 0; }
+    .stats-values dt { color: #a5b7c0; }
+    .stats-values dd { margin: 0; font-variant-numeric: tabular-nums; }
+    .stats-note { margin: 12px 0 0; color: #a5b7c0; font-size: 11px; }
+    .stats-reset { min-height: 44px; margin-top: 12px; padding: 0 12px; border: 1px solid rgba(191, 221, 232, .24); border-radius: 6px; background: transparent; color: #eef8fb; font: inherit; cursor: pointer; }
+    .stats-reset:hover { border-color: #65e6e3; color: #65e6e3; }
   </style>
 </head>
 <body>
   <div id="game" class="game" role="application" aria-label="Baggio Magical Kicks"></div>
+  <details class="play-stats" id="play-stats">
+    <summary aria-label="Open saved play statistics" title="Saved play statistics">Stats</summary>
+    <section class="stats-card" aria-labelledby="stats-title">
+      <h2 id="stats-title">Saved play statistics</h2>
+      <dl class="stats-values">
+        <dt>Sessions</dt><dd id="stats-sessions">0</dd>
+        <dt>Active time</dt><dd id="stats-active-time">0 min</dd>
+        <dt>Longest session</dt><dd id="stats-longest">0 min</dd>
+      </dl>
+      <p class="stats-note" id="stats-storage-note">Saved in this browser on this device. Original in-game score and cup counters are unchanged.</p>
+      <button class="stats-reset" id="stats-reset" type="button">Reset saved stats</button>
+    </section>
+  </details>
   <script>
-    window.addEventListener('load', () => {
-      OctoLoader.loadRuffle({
+    (() => {
+      const storageKey = 'octo-industries.game-stats.baggio-magical-kicks.v1';
+      const storedStats = (() => {
+        try {
+          const value = JSON.parse(localStorage.getItem(storageKey) || '{}');
+          return {
+            sessions: Number.isSafeInteger(value.sessions) && value.sessions >= 0 ? value.sessions : 0,
+            activeMs: Number.isFinite(value.activeMs) && value.activeMs >= 0 ? value.activeMs : 0,
+            longestSessionMs: Number.isFinite(value.longestSessionMs) && value.longestSessionMs >= 0 ? value.longestSessionMs : 0,
+          };
+        } catch {
+          return { sessions: 0, activeMs: 0, longestSessionMs: 0 };
+        }
+      })();
+      let sessionActiveMs = 0;
+      let activeSince = 0;
+      let sessionStarted = false;
+
+      function durationLabel(milliseconds) {
+        const totalMinutes = Math.floor(milliseconds / 60_000);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return hours ? `${hours} hr ${minutes} min` : `${minutes} min`;
+      }
+
+      function renderStats() {
+        document.querySelector('#stats-sessions').textContent = storedStats.sessions.toLocaleString();
+        document.querySelector('#stats-active-time').textContent = durationLabel(storedStats.activeMs + sessionActiveMs);
+        document.querySelector('#stats-longest').textContent = durationLabel(Math.max(storedStats.longestSessionMs, sessionActiveMs));
+      }
+
+      function saveStats() {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(storedStats));
+        } catch {
+          document.querySelector('#stats-storage-note').textContent = 'Browser storage is unavailable; statistics will not persist.';
+        }
+      }
+
+      function flushActiveTime() {
+        if (!activeSince) return;
+        sessionActiveMs += Date.now() - activeSince;
+        activeSince = document.visibilityState === 'visible' ? Date.now() : 0;
+        storedStats.activeMs += sessionActiveMs;
+        storedStats.longestSessionMs = Math.max(storedStats.longestSessionMs, sessionActiveMs);
+        sessionActiveMs = 0;
+        saveStats();
+        renderStats();
+      }
+
+      function startSession() {
+        if (sessionStarted) return;
+        sessionStarted = true;
+        storedStats.sessions += 1;
+        activeSince = document.visibilityState === 'visible' ? Date.now() : 0;
+        saveStats();
+        renderStats();
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flushActiveTime();
+        else if (sessionStarted && !activeSince) activeSince = Date.now();
+      });
+      window.addEventListener('pagehide', flushActiveTime);
+      window.setInterval(() => {
+        if (activeSince) flushActiveTime();
+      }, 10_000);
+      document.querySelector('#stats-reset').addEventListener('click', () => {
+        storedStats.sessions = 0;
+        storedStats.activeMs = 0;
+        storedStats.longestSessionMs = 0;
+        sessionActiveMs = 0;
+        saveStats();
+        renderStats();
+      });
+      renderStats();
+
+      window.addEventListener('load', async () => {
+        await OctoLoader.loadRuffle({
         url: 'games/baggio-magical-kicks.swf',
         config: {
           contextMenu: 'off',
@@ -69,7 +210,9 @@
         replace: document.getElementById('game'),
         className: 'game',
       });
-    });
+        startSession();
+      });
+    })();
   </script>
 </body>
 </html>
