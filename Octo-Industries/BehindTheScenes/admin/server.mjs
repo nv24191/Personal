@@ -1,7 +1,6 @@
 import { createServer } from 'node:http';
 import { promises as fs } from 'node:fs';
-import { scrypt, pbkdf2, timingSafeEqual, randomBytes, createHash } from 'node:crypto';
-import { promisify } from 'node:util';
+import { timingSafeEqual, randomBytes, createHash, createHmac } from 'node:crypto';
 import { dirname, extname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { lookup } from 'node:dns/promises';
@@ -9,8 +8,6 @@ import { isIP } from 'node:net';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 
-const scryptAsync = promisify(scrypt);
-const pbkdf2Async = promisify(pbkdf2);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const project = resolve(root, 'Octo-Industries/BehindTheScenes');
 const dataDirectory = resolve(process.env.OCTO_DATA_DIR || resolve(root, '.octo-data'));
@@ -21,7 +18,11 @@ const sessionLifetime = 8 * 60 * 60 * 1000;
 const maximumBodyBytes = 96 * 1024;
 const sessions = new Map();
 const loginAttempts = new Map();
-let passwordChecksInFlight = 0;
+const loginChallenges = new Map();
+const cloudflareAccountId = process.env.CF_ACCOUNT_ID || '';
+const cloudflareDatabaseId = process.env.CF_D1_DATABASE_ID || '';
+const cloudflareApiToken = process.env.CF_D1_API_TOKEN || '';
+const remoteD1Configured = Boolean(cloudflareAccountId || cloudflareDatabaseId || cloudflareApiToken);
 const adminAssetPaths = new Set(['/admin', '/admin/', '/admin/admin.css', '/admin/admin.js']);
 const mimeTypes = new Map([
   ['.avif', 'image/avif'], ['.css', 'text/css; charset=utf-8'], ['.gif', 'image/gif'],
@@ -51,14 +52,86 @@ function publicGame(game) {
 }
 
 async function saveState() {
+  if (remoteD1Configured) {
+    const result = await d1Query(
+      'INSERT INTO admin_state (id, value, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP',
+      [JSON.stringify(state)],
+    );
+    if (!result.success) throw new Error('Cloudflare D1 did not confirm saving admin state.');
+    return;
+  }
   await fs.mkdir(dataDirectory, { recursive: true, mode: 0o700 });
   const temporary = `${stateFile}.${randomBytes(6).toString('hex')}.tmp`;
   await fs.writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
   await fs.rename(temporary, stateFile);
 }
 
+async function d1Query(sql, params = []) {
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/d1/database/${encodeURIComponent(cloudflareDatabaseId)}/query`;
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${cloudflareApiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sql, params }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (error) {
+    console.error('Cloudflare D1 request failed:', error);
+    throw new Error('Unable to reach the persistent admin database.');
+  }
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error(`Cloudflare D1 returned an invalid response (HTTP ${response.status}).`);
+  }
+  const queryResult = payload.result?.[0];
+  if (!response.ok || !payload.success || queryResult?.success === false) {
+    console.error('Cloudflare D1 query failed:', response.status, payload.errors);
+    throw new Error('Cloudflare D1 rejected an admin database request. Check the D1 API token permissions and database setup.');
+  }
+  return queryResult || { success: true, results: [] };
+}
+
 async function loadState() {
   let catalog;
+  if (remoteD1Configured) {
+    const result = await d1Query('SELECT value FROM admin_state WHERE id = 1');
+    const stored = result.results?.[0]?.value;
+    let changed = false;
+    if (stored) {
+      state = JSON.parse(stored);
+      if (!Array.isArray(state.games) || !Array.isArray(state.jobs) || !Array.isArray(state.activity)) {
+        throw new Error('The saved admin state has an invalid format.');
+      }
+      const existingIds = new Set(state.games.map((game) => game.id));
+      for (const game of catalog) {
+        if (!existingIds.has(game.id)) {
+          state.games.push({ ...game, status: 'published' });
+          changed = true;
+        }
+      }
+      for (const job of state.jobs) {
+        if (job.status === 'running' || job.status === 'queued') {
+          job.status = 'failed';
+          job.message = 'The server restarted before this job completed. Retry it to continue.';
+          changed = true;
+        }
+      }
+    } else {
+      state = { games: catalog.map((game) => ({ ...game, status: 'published' })), jobs: [], activity: [] };
+      changed = true;
+    }
+    state.jobs = state.jobs.slice(-100);
+    state.activity = state.activity.slice(-100);
+    if (changed) await saveState();
+    return;
+  }
+
   try {
     const source = await fs.readFile(staticCatalogFile, 'utf8');
     const match = /Object\.freeze\(([\s\S]*)\);\s*$/.exec(source);
@@ -382,8 +455,7 @@ async function runJob(jobId, url) {
       const inlineCatalog = `<script>window.OCTO_GAMES = Object.freeze(${JSON.stringify(games).replace(/</g, '\\u003c')});</script>`;
       const standalone = html.replace(/<script\s+src="Octo-Industries\/BehindTheScenes\/hub\/catalog\.js"\s+defer><\/script>/i, inlineCatalog);
       if (standalone === html) throw new Error('The homepage does not contain the expected catalog script.');
-      await fs.mkdir(dataDirectory, { recursive: true, mode: 0o700 });
-      await fs.writeFile(resolve(dataDirectory, 'masterstandalone.html'), standalone, { mode: 0o600 });
+      state.standaloneHtml = standalone;
       state.standaloneCspHash = createHash('sha256').update(inlineCatalog).digest('base64');
       job.result = { gameCount: games.length, file: '/masterstandalone.html' };
       job.message = `Generated a hub HTML file for ${games.length} published games. Game assets remain separate files.`;
@@ -468,8 +540,9 @@ async function handleRequest(request, response) {
   }
   if (request.method === 'GET' && pathname === '/masterstandalone.html') {
     try {
-      const output = await fs.readFile(resolve(dataDirectory, 'masterstandalone.html'));
-      if (!state.standaloneCspHash) throw Object.assign(new Error('Standalone build metadata is missing. Rebuild the standalone hub.'), { status: 500 });
+      if (!state.standaloneHtml || !state.standaloneCspHash) {
+        throw Object.assign(new Error('Build the standalone hub before opening it.'), { status: 404 });
+      }
       response.writeHead(200, {
         'Cache-Control': 'no-store',
         'Content-Type': 'text/html; charset=utf-8',
@@ -477,11 +550,40 @@ async function handleRequest(request, response) {
         'Content-Security-Policy': `default-src 'self'; img-src 'self' data: https:; style-src 'self'; script-src 'self' 'sha256-${state.standaloneCspHash}'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'`,
         'X-Frame-Options': 'DENY',
       });
-      response.end(output);
+      response.end(state.standaloneHtml);
     } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
+      if (error.status !== 404) throw error;
       sendJson(response, 404, { error: 'Build the standalone hub before opening it.' });
     }
+    return;
+  }
+  if (pathname === '/api/admin/login/challenge' && request.method === 'POST') {
+    if (!sameOrigin(request)) {
+      sendJson(response, 403, { error: 'Cross-origin login requests are not allowed.' });
+      return;
+    }
+    const configured = validPasswordHash(process.env.OCTO_ADMIN_PASSWORD_HASH);
+    if (!configured || configured.algorithm !== 'pbkdf2') {
+      sendJson(response, 503, { error: 'Admin login requires a valid PBKDF2 password hash.' });
+      return;
+    }
+    const now = Date.now();
+    for (const [id, challenge] of loginChallenges) {
+      if (challenge.expiresAt <= now) loginChallenges.delete(id);
+    }
+    if (loginChallenges.size >= 1000) {
+      sendJson(response, 503, { error: 'The login service is busy. Try again shortly.' });
+      return;
+    }
+    const challengeId = randomBytes(32).toString('hex');
+    const nonce = randomBytes(32).toString('hex');
+    loginChallenges.set(challengeId, {
+      nonce,
+      salt: configured.salt,
+      iterations: configured.iterations,
+      expiresAt: now + 2 * 60 * 1000,
+    });
+    sendJson(response, 200, { challengeId, nonce, salt: configured.salt, iterations: configured.iterations });
     return;
   }
   if (pathname === '/api/admin/login' && request.method === 'POST') {
@@ -512,23 +614,25 @@ async function handleRequest(request, response) {
         return;
       }
     }
-    if (passwordChecksInFlight >= 8) {
-      sendJson(response, 429, { error: 'The login service is busy. Try again shortly.' });
-      return;
-    }
     const body = await readJson(request);
     const configured = validPasswordHash(process.env.OCTO_ADMIN_PASSWORD_HASH);
-    const password = typeof body.password === 'string' ? body.password : '';
-    passwordChecksInFlight += 1;
-    let given;
-    try {
-      given = configured?.algorithm === 'pbkdf2'
-        ? await pbkdf2Async(password, configured.salt, configured.iterations, 64, 'sha512')
-        : await scryptAsync(password, configured?.salt || 'octo-admin-not-configured', 64, { N: 16384, r: 8, p: 1 });
-    } finally {
-      passwordChecksInFlight -= 1;
+    const challengeId = typeof body.challengeId === 'string' ? body.challengeId : '';
+    const proof = typeof body.proof === 'string' ? body.proof : '';
+    const challenge = loginChallenges.get(challengeId);
+    loginChallenges.delete(challengeId);
+    let success = false;
+    if (configured?.algorithm === 'pbkdf2'
+      && /^[a-f\d]{64}$/.test(challengeId)
+      && /^[a-f\d]{64}$/.test(proof)
+      && challenge
+      && challenge.expiresAt > Date.now()
+      && challenge.salt === configured.salt
+      && challenge.iterations === configured.iterations) {
+      const expected = createHmac('sha256', configured.digest)
+        .update(`${challengeId}\n${challenge.nonce}`)
+        .digest();
+      success = timingSafeEqual(Buffer.from(proof, 'hex'), expected);
     }
-    const success = Boolean(configured && timingSafeEqual(Buffer.from(given), configured.digest));
     if (!success) {
       sendJson(response, attempts.blockedUntil ? 429 : 401, { error: attempts.blockedUntil ? 'Too many login attempts. Try again later.' : 'Invalid admin password.' });
       return;
@@ -719,16 +823,16 @@ async function handleRequest(request, response) {
     }
     if (pathname === '/api/admin/standalone' && request.method === 'GET') {
       try {
-        const output = await fs.readFile(resolve(dataDirectory, 'masterstandalone.html'));
+        if (!state.standaloneHtml) throw Object.assign(new Error('Build the standalone hub before downloading it.'), { status: 404 });
         response.writeHead(200, {
           'Cache-Control': 'no-store',
           'Content-Disposition': 'attachment; filename="masterstandalone.html"',
           'Content-Type': 'text/html; charset=utf-8',
           'X-Content-Type-Options': 'nosniff',
         });
-        response.end(output);
+        response.end(state.standaloneHtml);
       } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
+        if (error.status !== 404) throw error;
         sendJson(response, 404, { error: 'Build the standalone hub before downloading it.' });
       }
       return;
@@ -809,6 +913,14 @@ async function handleRequest(request, response) {
 const passwordHash = validPasswordHash(process.env.OCTO_ADMIN_PASSWORD_HASH);
 if (!passwordHash) {
   console.error('OCTO_ADMIN_PASSWORD_HASH is missing or invalid. Generate it with npm --prefix Octo-Industries/BehindTheScenes run admin:hash.');
+  process.exit(1);
+}
+if (remoteD1Configured && !(cloudflareAccountId && cloudflareDatabaseId && cloudflareApiToken)) {
+  console.error('CF_ACCOUNT_ID, CF_D1_DATABASE_ID, and CF_D1_API_TOKEN must all be configured to use persistent Cloudflare D1 storage.');
+  process.exit(1);
+}
+if (process.env.NODE_ENV === 'production' && !remoteD1Configured) {
+  console.error('Persistent Cloudflare D1 credentials are required in production. Local disk storage is not durable on Render Free.');
   process.exit(1);
 }
 

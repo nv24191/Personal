@@ -59,7 +59,7 @@ The generated standalone hub embeds the current published catalog but uses the s
 
 ## Hosting
 
-The free Cloudflare Pages deployment publishes both the static hub and its Functions API. Render Static Sites cannot run this project's Node admin server, which is why `/admin` on the existing `onrender.com` static deployment returns 404. Cloudflare Pages will provide a separate `pages.dev` address unless you connect a domain you own.
+The free Cloudflare Pages deployment publishes the static hub and its Functions API. If the `pages.dev` domain is blocked on a device or network, deploy the Node service to Render Free instead. Render Static Sites cannot run the Node admin server; use a **Web Service**. Render Free sleeps after inactivity and its local disk is temporary, so this configuration stores admin changes durably in the existing Cloudflare D1 database through the Cloudflare API. This means the game site itself is served from Render, not `pages.dev`.
 
 To build the Cloudflare Pages assets locally, run `npm run pages:build` from the repository root. The build refreshes the catalog and gzips any oversized static files; if another file cannot fit Cloudflare Pages' 25 MiB per-file limit after compression, the build stops and identifies it. Game files remain static assets. The build excludes server source, tests, and dependencies from the published output.
 
@@ -71,7 +71,14 @@ To build the Cloudflare Pages assets locally, run `npm run pages:build` from the
 4. In **Settings → Variables and Secrets**, add the production secret with key/name `OCTO_ADMIN_PASSWORD_HASH`. Generate it locally with `npm --prefix Octo-Industries/BehindTheScenes run admin:hash` in an interactive terminal. In Cloudflare's **Value** box, paste only the part after `OCTO_ADMIN_PASSWORD_HASH=` (it starts with `pbkdf2$`); never expose or commit the password. Add another secret named `GEMINI_API_KEY` if you want the chatbot enabled. Optionally set `OCTO_GEMINI_MODEL`; the default is `gemini-2.5-flash`.
 5. Redeploy after setting the secrets and bindings. Open `https://<your-project>.pages.dev/admin/`; the public hub's **Admin sign in** button points to that panel.
 
-Cloudflare's Free plan has request, compute, D1, build, file-count, and file-size quotas; this is not unlimited hosting. The admin state and sessions are stored in D1. External page scanning is disabled in this deployment. Google Gemini also has project/model-dependent quotas; without a `GEMINI_API_KEY`, the chatbot explains that it is not configured. The old Render URL will not automatically point to the new Pages deployment.
+Cloudflare's Free plan has request, compute, D1, build, file-count, and file-size quotas; this is not unlimited hosting. The admin state and sessions are stored in D1. External page scanning is disabled in this deployment. Google Gemini also has project/model-dependent quotas; without a `GEMINI_API_KEY`, the chatbot explains that it is not configured.
+
+### Render Free setup (alternative when Pages is blocked)
+
+1. Create a Cloudflare API token with **D1: Edit** permission scoped to this account. Keep the token secret.
+2. In Render, create a **New → Blueprint Instance** connected to this repository and apply `render.yaml`. If the existing Static Site has a conflicting service name, keep the Node Web Service name `octo-industries-hub-web`; do not convert or delete the Static Site yet.
+3. When prompted, set `OCTO_ADMIN_PASSWORD_HASH` to the generated `pbkdf2$...` hash, `CF_D1_API_TOKEN` to the Cloudflare API token, and optionally `GEMINI_API_KEY` to your Google AI Studio key. The account and database IDs are already in `render.yaml`. Do not enter the raw admin password, and do not commit secrets.
+4. Wait for the Node **Web Service** to become Live. Use its new `*.onrender.com` address; `/admin/` should load there. Free services can take about a minute to wake after 15 minutes idle. Catalog edits and activity persist in D1 across sleeps/redeploys. Gemini remains optional and subject to Google's free-tier quota.
 
 Run `npm --prefix Octo-Industries/BehindTheScenes run sync` after changing game metadata or adding a game, then commit the generated `Octo-Industries/BehindTheScenes/hub/catalog.js`. The Cloudflare Pages build runs this sync automatically before deployment.
 

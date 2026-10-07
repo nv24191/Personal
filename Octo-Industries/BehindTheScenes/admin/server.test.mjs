@@ -6,7 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes, pbkdf2Sync } from 'node:crypto';
+import { createHmac, randomBytes, pbkdf2Sync } from 'node:crypto';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const root = resolve(project, '../..');
@@ -45,6 +45,26 @@ async function waitForJob(baseUrl, headers, id) {
     await new Promise((resolveWait) => setTimeout(resolveWait, 50));
   }
   throw new Error(`Job ${id} did not finish.`);
+}
+
+async function submitLogin(baseUrl, password) {
+  const originHeaders = { 'Content-Type': 'application/json', Origin: baseUrl };
+  const challengeResponse = await fetch(`${baseUrl}/api/admin/login/challenge`, {
+    method: 'POST',
+    headers: originHeaders,
+    body: '{}',
+  });
+  assert.equal(challengeResponse.status, 200);
+  const challenge = await challengeResponse.json();
+  const verifier = pbkdf2Sync(password, challenge.salt, challenge.iterations, 64, 'sha512');
+  const proof = createHmac('sha256', verifier)
+    .update(`${challenge.challengeId}\n${challenge.nonce}`)
+    .digest('hex');
+  return fetch(`${baseUrl}/api/admin/login`, {
+    method: 'POST',
+    headers: originHeaders,
+    body: JSON.stringify({ challengeId: challenge.challengeId, proof }),
+  });
 }
 
 test('admin service protects and manages the canonical library', async (t) => {
@@ -98,18 +118,10 @@ test('admin service protects and manages the canonical library', async (t) => {
   const unauthorized = await fetch(`${baseUrl}/api/admin/dashboard`);
   assert.equal(unauthorized.status, 401);
 
-  const badLogin = await fetch(`${baseUrl}/api/admin/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Origin: baseUrl },
-    body: JSON.stringify({ password: 'incorrect' }),
-  });
+  const badLogin = await submitLogin(baseUrl, 'incorrect');
   assert.equal(badLogin.status, 401);
 
-  const login = await fetch(`${baseUrl}/api/admin/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Origin: baseUrl },
-    body: JSON.stringify({ password }),
-  });
+  const login = await submitLogin(baseUrl, password);
   assert.equal(login.status, 200);
   const session = await login.json();
   assert.match(login.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
@@ -212,18 +224,10 @@ test('admin service protects and manages the canonical library', async (t) => {
   assert.match(await standalone.text(), /window\.OCTO_GAMES/);
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    const rejected = await fetch(`${baseUrl}/api/admin/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Origin: baseUrl },
-      body: JSON.stringify({ password: 'incorrect-again' }),
-    });
+    const rejected = await submitLogin(baseUrl, 'incorrect-again');
     assert.equal(rejected.status, 401);
   }
-  const rateLimited = await fetch(`${baseUrl}/api/admin/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Origin: baseUrl },
-    body: JSON.stringify({ password: 'incorrect-again' }),
-  });
+  const rateLimited = await submitLogin(baseUrl, 'incorrect-again');
   assert.equal(rateLimited.status, 429);
 
   const logout = await fetch(`${baseUrl}/api/admin/logout`, {
