@@ -345,6 +345,13 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
   .game-card h3 { font-size: 30px; }
 }
 
+@media (min-width: 761px) and (max-width: 1024px) {
+  .about-inner { display: grid; grid-template-columns: 64px minmax(0, 1fr) 46px; align-items: start; gap: clamp(20px, 3vw, 36px); }
+  .about-emblem { width: 64px; height: 64px; margin-top: 5px; }
+  .about-section p:not(.eyebrow) { max-width: 680px; }
+  .about-link { margin: 5px 0 0; }
+}
+
 @media (max-width: 760px) {
   :root { --gutter: 25px; }
   .site-header { height: 68px; grid-template-columns: 1fr auto auto; gap: 14px; }
