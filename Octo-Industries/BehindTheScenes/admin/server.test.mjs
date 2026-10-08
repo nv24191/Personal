@@ -102,7 +102,7 @@ test('admin service protects and manages the canonical library', async (t) => {
   assert.equal(homepage.status, 200);
   const homepageHtml = await homepage.text();
   assert.match(homepageHtml, /Octo Industries/);
-  assert.match(homepageHtml, /href="\/admin">Admin sign in<\/a>/);
+  assert.match(homepageHtml, /href="\/admin">Admin Dashboard<\/a>/);
   assert.match(homepageHtml, /class="footer-admin-link" href="\/admin"/);
   const adminPage = await fetch(`${baseUrl}/admin`);
   assert.equal(adminPage.status, 200);
@@ -119,6 +119,12 @@ test('admin service protects and manages the canonical library', async (t) => {
   const unauthorized = await fetch(`${baseUrl}/api/admin/dashboard`);
   assert.equal(unauthorized.status, 401);
   assert.equal((await fetch(`${baseUrl}/api/admin/feedback`)).status, 401);
+  assert.equal((await fetch(`${baseUrl}/api/admin/roadmap`)).status, 401);
+  const publicRoadmapResponse = await fetch(`${baseUrl}/api/roadmap`);
+  assert.equal(publicRoadmapResponse.status, 200);
+  const publicRoadmap = await publicRoadmapResponse.json();
+  assert.ok(publicRoadmap.some((item) => item.id === 'game-dna'));
+  assert.ok(publicRoadmap.every((item) => !['released', 'archived'].includes(item.status) && !('internalNotes' in item)));
 
   const badLogin = await submitLogin(baseUrl, 'incorrect');
   assert.equal(badLogin.status, 401);
@@ -130,6 +136,31 @@ test('admin service protects and manages the canonical library', async (t) => {
   const cookie = login.headers.get('set-cookie').split(';', 1)[0];
   const headers = { Cookie: cookie };
   const writeHeaders = { ...headers, Origin: baseUrl, 'X-CSRF-Token': session.csrfToken, 'Content-Type': 'application/json' };
+
+  const roadmapWithoutCsrf = await fetch(`${baseUrl}/api/admin/roadmap`, {
+    method: 'POST', headers: { ...headers, Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'Search analytics', description: 'Record popular searches.' }),
+  });
+  assert.equal(roadmapWithoutCsrf.status, 403);
+  const roadmapCreate = await fetch(`${baseUrl}/api/admin/roadmap`, {
+    method: 'POST', headers: writeHeaders,
+    body: JSON.stringify({ title: 'Search analytics', description: 'Record popular searches.', category: 'analytics', priority: 'normal' }),
+  });
+  assert.equal(roadmapCreate.status, 201);
+  const roadmapItem = await roadmapCreate.json();
+  const roadmapUpdate = await fetch(`${baseUrl}/api/admin/roadmap/${roadmapItem.id}`, {
+    method: 'PATCH', headers: writeHeaders,
+    body: JSON.stringify({ status: 'testing', internalNotes: 'Review query volume first.' }),
+  });
+  assert.equal(roadmapUpdate.status, 200);
+  const updatedRoadmap = await roadmapUpdate.json();
+  assert.equal(updatedRoadmap.status, 'testing');
+  const publicUpdatedRoadmap = await (await fetch(`${baseUrl}/api/roadmap`)).json();
+  const publicSearchAnalytics = publicUpdatedRoadmap.find((item) => item.id === roadmapItem.id);
+  assert.equal(publicSearchAnalytics.status, 'testing');
+  assert.equal('internalNotes' in publicSearchAnalytics, false);
+  const roadmapDelete = await fetch(`${baseUrl}/api/admin/roadmap/${roadmapItem.id}`, { method: 'DELETE', headers: writeHeaders });
+  assert.equal(roadmapDelete.status, 200);
 
   const initialCatalog = await (await fetch(`${baseUrl}/api/catalog`)).json();
   const feedbackResponse = await fetch(`${baseUrl}/api/feedback`, {

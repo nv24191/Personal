@@ -37,12 +37,13 @@
           <div class="sidebar-brand"><img src="/Octo-Industries/branding/primary-logo.png" alt=""><div><strong>OCTO INDUSTRIES</strong><span>ADMIN DASHBOARD</span></div></div>
           <nav class="admin-navigation" aria-label="Admin Dashboard sections">
             <button class="nav-item is-active" type="button" data-admin-view="overview" aria-current="page" aria-label="Overview" title="Overview"><span class="nav-icon" aria-hidden="true">⌂</span><span>Overview</span></button>
+            <button class="nav-item roadmap-nav-item" type="button" data-admin-view="roadmap" aria-label="Roadmap" title="Roadmap"><span class="nav-icon" aria-hidden="true">↗</span><span>Roadmap</span><span class="nav-count" id="nav-roadmap-count">—</span></button>
             <details class="nav-group" open>
               <summary aria-label="Games" title="Games" data-admin-view="games"><span class="nav-icon" aria-hidden="true">◈</span><span>Games</span></summary>
               <button class="nav-item nav-subitem" type="button" data-admin-view="games"><span>Library</span><span class="nav-count" id="nav-game-count">—</span></button>
               <button class="nav-item nav-subitem" type="button" data-admin-view="games" data-focus-target="#category-filter"><span>Categories &amp; tags</span></button>
               <button class="nav-item nav-subitem is-planned" type="button" disabled title="No game creation API is available yet"><span>Add game</span><small>Planned</small></button>
-              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Game DNA storage is not available yet"><span>Game DNA</span><small>Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Game DNA storage is not available yet"><span>Game DNA</span><small data-roadmap-label="game-dna">Planned</small></button>
               <button class="nav-item nav-subitem is-planned" type="button" disabled title="Game changelog management is not available yet"><span>Changelogs</span><small>Planned</small></button>
             </details>
             <details class="nav-group" open>
@@ -52,28 +53,34 @@
             </details>
             <details class="nav-group">
               <summary aria-label="Content" title="Content"><span class="nav-icon" aria-hidden="true">▤</span><span>Content</span></summary>
-              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Content publishing is not available yet"><span>News &amp; announcements</span><small>Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Content publishing is not available yet"><span>News &amp; announcements</span><small data-roadmap-label="octo-news">Planned</small></button>
               <button class="nav-item nav-subitem is-planned" type="button" disabled title="Featured content workflow is not available yet"><span>Coming soon &amp; featured</span><small>Planned</small></button>
             </details>
             <details class="nav-group" open>
               <summary aria-label="Operations" title="Operations" data-admin-view="operations"><span class="nav-icon" aria-hidden="true">⌁</span><span>Operations</span><span class="nav-count" id="nav-failed-count">—</span></summary>
               <button class="nav-item nav-subitem" type="button" data-admin-view="operations"><span>Job center</span></button>
               <button class="nav-item nav-subitem" type="button" data-admin-view="operations" data-focus-target="#game-url"><span>Health checks &amp; source scan</span></button>
-              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Integrity scanning is not available yet"><span>Integrity &amp; backups</span><small>Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Integrity scanning is not available yet"><span>Integrity Scanner</span><small>Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Backup restore workflows are not available yet"><span>Backup Manager</span><small data-roadmap-label="backup-manager">Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Offline hub mode is not available yet"><span>Offline Hub</span><small data-roadmap-label="offline-hub">On Hold</small></button>
             </details>
             <details class="nav-group">
               <summary aria-label="Octo Nexus" title="Octo Nexus"><span class="nav-icon" aria-hidden="true">⌘</span><span>Octo Nexus</span></summary>
-              <button class="nav-item nav-subitem is-planned" type="button" disabled title="GitHub automation views are not available yet"><span>Sync, commits &amp; snapshots</span><small>Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="GitHub automation views are not available yet"><span>Sync &amp; commit timeline</span><small data-roadmap-label="octo-nexus">In Progress</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Release snapshots are not available yet"><span>Release Snapshots</span><small data-roadmap-label="release-snapshots">Planned</small></button>
             </details>
             <details class="nav-group" open>
               <summary aria-label="AI Center" title="AI Center" data-admin-view="ai"><span class="nav-icon" aria-hidden="true">✳</span><span>AI Center</span></summary>
               <button class="nav-item nav-subitem" type="button" data-admin-view="ai"><span>Library assistant</span></button>
               <button class="nav-item nav-subitem" type="button" data-admin-view="operations" data-focus-target="#game-url"><span>Game page inspector</span></button>
-              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Metadata generation and trend analysis are not available yet"><span>Metadata &amp; trends</span><small>Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Metadata generation and trend analysis are not available yet"><span>Metadata generator</span><small data-roadmap-label="ai-metadata-generator">Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Personalized recommendations are not available yet"><span>Recommendations</span><small data-roadmap-label="game-recommendations">Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Trend forecasting is not available yet"><span>Trend Forecaster</span><small data-roadmap-label="trend-forecaster">Planned</small></button>
             </details>
             <details class="nav-group">
               <summary aria-label="Museum and analytics" title="Museum and analytics"><span class="nav-icon" aria-hidden="true">▧</span><span>Museum &amp; analytics</span></summary>
-              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Historical archives and analytics are not available yet"><span>Archives &amp; platform stats</span><small>Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Historical archives and analytics are not available yet"><span>Archives &amp; platform stats</span><small data-roadmap-label="octo-museum">Planned</small></button>
+              <button class="nav-item nav-subitem is-planned" type="button" disabled title="Search analytics are not available yet"><span>Search Analytics</span><small data-roadmap-label="search-analytics">Planned</small></button>
             </details>
           </nav>
           <button class="sidebar-collapse" id="sidebar-collapse" type="button" aria-label="Collapse navigation" title="Collapse navigation"><span aria-hidden="true">‹</span><span class="collapse-label">Collapse navigation</span></button>
@@ -84,6 +91,11 @@
           <header class="dashboard-heading">
             <button class="drawer-toggle" id="sidebar-drawer-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="admin-sidebar"><span aria-hidden="true">☰</span></button>
             <div class="dashboard-heading-copy"><p class="eyebrow">OCTO INDUSTRIES / ADMIN DASHBOARD</p><h1 id="admin-view-title">Admin Dashboard</h1><p class="muted" id="admin-view-description">Your compact operations overview.</p></div>
+            <div class="global-search">
+              <label class="visually-hidden" for="global-admin-search">Search games, feedback, roadmap, and jobs</label>
+              <input id="global-admin-search" type="search" placeholder="Search the dashboard" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results">
+              <div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
+            </div>
             <div class="dashboard-actions">
               <button class="button button-secondary" id="build-button" type="button">Build standalone hub <span aria-hidden="true">↗</span></button>
               <button class="button button-primary" type="button" data-admin-view="ai" data-focus-target="#chat-input">Ask Octo AI</button>
@@ -113,7 +125,24 @@
                 <section class="panel overview-widget" aria-labelledby="overview-jobs-title"><div class="section-heading"><div><p class="eyebrow">OPERATIONS</p><h2 id="overview-jobs-title">Recent jobs</h2></div><button class="text-action" type="button" data-admin-view="operations">All jobs <span aria-hidden="true">→</span></button></div><div class="overview-list" id="overview-jobs"></div></section>
                 <section class="panel overview-widget" aria-labelledby="overview-activity-title"><div class="section-heading"><div><p class="eyebrow">AUDIT TRAIL</p><h2 id="overview-activity-title">Recent activity</h2></div><button class="text-action" type="button" data-admin-view="operations">Activity <span aria-hidden="true">→</span></button></div><div class="overview-list" id="overview-activity"></div></section>
                 <section class="panel overview-widget overview-feedback" aria-labelledby="overview-feedback-title"><div class="section-heading"><div><p class="eyebrow">COMMUNITY</p><h2 id="overview-feedback-title">Recent feedback</h2></div><button class="text-action" type="button" data-admin-view="community">Inbox <span aria-hidden="true">→</span></button></div><div class="overview-list" id="overview-feedback"></div></section>
+                <section class="panel overview-widget roadmap-overview" aria-labelledby="roadmap-overview-title"><div class="section-heading"><div><p class="eyebrow">PLATFORM DEVELOPMENT</p><h2 id="roadmap-overview-title">Roadmap overview</h2></div><button class="text-action" type="button" data-admin-view="roadmap">Manage <span aria-hidden="true">→</span></button></div><div class="roadmap-summary" id="roadmap-summary"></div></section>
               </div>
+            </section>
+
+            <section class="admin-panel" data-admin-panel="roadmap" aria-labelledby="roadmap-title" hidden>
+              <section class="panel roadmap-panel">
+                <div class="section-heading"><div><p class="eyebrow">SOURCE OF TRUTH</p><h2 id="roadmap-title">Roadmap</h2></div><button class="button button-primary" id="roadmap-create" type="button">Create feature <span aria-hidden="true">+</span></button></div>
+                <div class="roadmap-status-summary" id="roadmap-status-summary" aria-label="Filter roadmap by status"></div>
+                <div class="roadmap-toolbar">
+                  <label class="visually-hidden" for="roadmap-search">Search roadmap</label><input type="search" id="roadmap-search" placeholder="Search title, description, notes">
+                  <label class="visually-hidden" for="roadmap-status-filter">Filter by status</label><select id="roadmap-status-filter"><option value="all">All statuses</option><option value="idea">Idea</option><option value="planned">Planned</option><option value="in-progress">In Progress</option><option value="testing">Testing</option><option value="released">Released</option><option value="on-hold">On Hold</option><option value="archived">Archived</option></select>
+                  <label class="visually-hidden" for="roadmap-category-filter">Filter by category</label><select id="roadmap-category-filter"><option value="all">All categories</option><option value="games">Games</option><option value="community">Community</option><option value="content">Content</option><option value="operations">Operations</option><option value="platform">Platform</option><option value="ai">AI</option><option value="museum">Museum</option><option value="analytics">Analytics</option><option value="other">Other</option></select>
+                  <label class="visually-hidden" for="roadmap-priority-filter">Filter by priority</label><select id="roadmap-priority-filter"><option value="all">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select>
+                  <label class="visually-hidden" for="roadmap-sort">Sort roadmap</label><select id="roadmap-sort"><option value="updated">Recently updated</option><option value="priority">Priority</option><option value="title">Title A to Z</option><option value="created">Recently created</option></select>
+                </div>
+                <div class="roadmap-table-wrap"><table class="roadmap-table"><caption class="visually-hidden">Manage Octo Industries roadmap features</caption><thead><tr><th scope="col">Feature</th><th scope="col">Status</th><th scope="col">Category</th><th scope="col">Priority</th><th scope="col">Created</th><th scope="col">Updated</th><th scope="col">Actions</th></tr></thead><tbody id="roadmap-list"></tbody></table></div>
+                <p class="subtle roadmap-count" id="roadmap-count" aria-live="polite"></p>
+              </section>
             </section>
 
             <section class="admin-panel" data-admin-panel="games" aria-labelledby="library-title" hidden>
@@ -164,7 +193,7 @@
               <h2 class="visually-hidden" id="operations-title">Operations</h2>
               <div class="operations-grid">
                 <div class="operations-stream">
-                  <section class="panel" aria-labelledby="jobs-title"><div class="section-heading"><div><p class="eyebrow">BACKGROUND TASKS</p><h2 id="jobs-title">Job center</h2></div></div><div class="job-list" id="job-list" aria-live="polite"></div></section>
+                  <section class="panel" aria-labelledby="jobs-title"><div class="section-heading"><div><p class="eyebrow">BACKGROUND TASKS</p><h2 id="jobs-title">Job center</h2></div></div><label class="visually-hidden" for="job-search">Filter jobs</label><input class="job-search" id="job-search" type="search" placeholder="Filter recent jobs"><div class="job-list" id="job-list" aria-live="polite"></div></section>
                   <section class="panel" aria-labelledby="activity-title"><div class="section-heading"><div><p class="eyebrow">AUDIT TRAIL</p><h2 id="activity-title">Admin activity</h2></div></div><div class="activity-list" id="activity-list" aria-live="polite"></div></section>
                 </div>
                 <section class="panel agent-panel" aria-labelledby="agent-title">
@@ -205,6 +234,22 @@
       <label class="check-label"><input id="edit-featured" type="checkbox"> Featured on the public hub</label>
       <div class="dialog-actions"><button class="button button-quiet" type="button" id="cancel-edit">Cancel</button><button class="button button-primary" type="submit">Save metadata</button></div>
       <p class="notice" id="edit-message" role="alert" hidden></p>
+    </form>
+  </dialog>
+  <dialog id="roadmap-dialog" class="edit-dialog roadmap-dialog" aria-labelledby="roadmap-dialog-title">
+    <form id="roadmap-form">
+      <div class="section-heading"><div><p class="eyebrow">PLATFORM DEVELOPMENT</p><h2 id="roadmap-dialog-title">Create roadmap feature</h2></div><button class="icon-button" type="button" id="roadmap-close" aria-label="Close">×</button></div>
+      <input type="hidden" id="roadmap-id">
+      <label for="roadmap-title-input">Title</label><input id="roadmap-title-input" maxlength="100" required>
+      <label for="roadmap-description">Description</label><textarea id="roadmap-description" maxlength="1000" rows="3" required></textarea>
+      <div class="roadmap-form-grid">
+        <label for="roadmap-status">Status<select id="roadmap-status" required><option value="idea">Idea</option><option value="planned">Planned</option><option value="in-progress">In Progress</option><option value="testing">Testing</option><option value="released">Released</option><option value="on-hold">On Hold</option><option value="archived">Archived</option></select></label>
+        <label for="roadmap-category">Category<select id="roadmap-category" required><option value="games">Games</option><option value="community">Community</option><option value="content">Content</option><option value="operations">Operations</option><option value="platform">Platform</option><option value="ai">AI</option><option value="museum">Museum</option><option value="analytics">Analytics</option><option value="other">Other</option></select></label>
+        <label for="roadmap-priority">Priority<select id="roadmap-priority" required><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
+      </div>
+      <label for="roadmap-notes">Internal notes</label><textarea id="roadmap-notes" maxlength="5000" rows="4"></textarea>
+      <div class="dialog-actions"><button class="button button-quiet" type="button" id="roadmap-cancel">Cancel</button><button class="button button-primary" id="roadmap-save" type="submit">Save feature</button></div>
+      <p class="notice" id="roadmap-message" role="alert" hidden></p>
     </form>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

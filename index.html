@@ -34,14 +34,19 @@
     <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
       <a class="nav-link is-active" href="#home">Home</a>
       <a class="nav-link" href="#games">Games</a>
-      <a class="nav-link" href="#categories">Categories</a>
+      <a class="nav-link" href="#trending">Trending</a>
+      <a class="nav-link" href="#recently-added">Recently Added</a>
+      <a class="nav-link" href="#coming-soon">Coming Soon</a>
+      <a class="nav-link" href="#coming-soon" data-roadmap-category="content">Octo News</a>
       <button class="nav-link nav-search" type="button">Search</button>
       <a class="nav-link" href="#about">About</a>
+      <a class="nav-link" href="mailto:RealMrOcto@Outlook.com">Contact</a>
       <button class="nav-link" id="feedback-open" type="button">Suggestions / Issues</button>
       <a class="nav-link" href="/admin">Admin Dashboard</a>
     </nav>
     <a class="header-cta" href="#games"><span class="live-dot"></span><span><b id="header-count">06</b> TITLES</span><span class="cta-arrow" aria-hidden="true">↗</span></a>
   </header>
+  <button class="nav-backdrop" id="nav-backdrop" type="button" aria-label="Close navigation" hidden></button>
 
   <main>
     <section class="hero content-width" id="home" aria-labelledby="hero-title">
@@ -60,7 +65,7 @@
         </div>
       </div>
 
-      <section class="featured" aria-label="Featured games">
+      <section class="featured" aria-label="Featured game">
         <div class="featured-frame" id="featured-frame">
           <div class="featured-wash" aria-hidden="true"></div>
           <div class="featured-art" id="featured-art" aria-hidden="true"></div>
@@ -82,9 +87,27 @@
       <div class="hero-footnote" aria-hidden="true"><span>34° 03' N</span><span>PLAY IS A STATE OF MIND</span></div>
     </section>
 
+    <section class="discovery-section content-width" id="trending" aria-labelledby="trending-heading">
+      <div class="section-heading compact-heading"><div><p class="eyebrow"><span class="eyebrow-line"></span> CURATED FOR YOU</p><h2 id="trending-heading">Editor's picks</h2></div><a class="small-link" href="#games">All games <span aria-hidden="true">↗</span></a></div>
+      <div class="discovery-grid" id="trending-grid"></div>
+    </section>
+
+    <section class="recent-section content-width" id="recently-added" aria-labelledby="recently-added-heading" hidden>
+      <div class="section-heading compact-heading"><div><p class="eyebrow"><span class="eyebrow-line"></span> NEW TO THE HUB</p><h2 id="recently-added-heading">Recently added</h2></div><a class="small-link" href="#games">Browse library <span aria-hidden="true">↗</span></a></div>
+      <div class="recent-list" id="recently-added-list"></div>
+    </section>
+
     <section class="recent-section content-width" id="recent-section" aria-labelledby="recent-heading" hidden>
       <div class="section-heading compact-heading"><div><p class="eyebrow"><span class="eyebrow-line"></span> RIGHT WHERE YOU LEFT OFF</p><h2 id="recent-heading">Recently played</h2></div><a class="small-link" href="#games">Your library <span aria-hidden="true">↗</span></a></div>
       <div class="recent-list" id="recent-list"></div>
+    </section>
+
+    <section class="coming-section" id="coming-soon" aria-labelledby="coming-heading">
+      <div class="coming-inner content-width">
+        <div class="section-heading compact-heading"><div><p class="eyebrow"><span class="eyebrow-line"></span> WHAT'S NEXT</p><h2 id="coming-heading">Coming soon</h2></div><span class="roadmap-live"><i></i> LIVE ROADMAP</span></div>
+        <p class="coming-intro">A look at what we're exploring and building across Octo Industries.</p>
+        <div class="coming-grid" id="coming-grid" aria-live="polite"><p class="muted">Loading roadmap…</p></div>
+      </div>
     </section>
 
     <section class="library-section content-width" id="games" aria-labelledby="games-heading">
@@ -94,6 +117,7 @@
       </div>
       <div class="library-toolbar" id="categories">
         <div class="category-list" id="category-list" role="group" aria-label="Filter games by category"></div>
+        <label class="sort-box" for="game-sort"><span>Sort</span><select id="game-sort"><option value="title">Title A–Z</option><option value="title-desc">Title Z–A</option><option value="category">Category</option><option value="recent">Recently added</option></select></label>
         <label class="search-box" for="game-search"><span class="search-icon" aria-hidden="true"></span><input id="game-search" type="search" placeholder="Search your universe" autocomplete="off"><kbd>⌘ K</kbd><button class="search-clear" id="search-clear" type="button" aria-label="Clear search" hidden>×</button></label>
       </div>
       <p class="results-summary" id="results-summary" aria-live="polite"></p>

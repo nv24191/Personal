@@ -7,8 +7,14 @@ const resultSummary = document.querySelector('#results-summary');
 const emptyState = document.querySelector('#empty-state');
 const recentSection = document.querySelector('#recent-section');
 const recentList = document.querySelector('#recent-list');
-const featuredGames = games.filter((game) => game.featured);
-const slides = featuredGames.length ? featuredGames : games;
+const recentlyAddedSection = document.querySelector('#recently-added');
+const recentlyAddedList = document.querySelector('#recently-added-list');
+const trendingGrid = document.querySelector('#trending-grid');
+const comingGrid = document.querySelector('#coming-grid');
+let roadmapItems = [];
+let activeRoadmapCategory = 'all';
+let featuredGames = games.filter((game) => game.featured);
+let slides = featuredGames.length ? featuredGames : games;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let activeCategory = 'All';
 let slideIndex = 0;
@@ -110,6 +116,13 @@ function getMatches() {
 
 function renderGames() {
   const matches = getMatches();
+  const sorting = document.querySelector('#game-sort').value;
+  matches.sort((first, second) => {
+    if (sorting === 'title-desc') return second.title.localeCompare(first.title);
+    if (sorting === 'category') return first.category.localeCompare(second.category) || first.title.localeCompare(second.title);
+    if (sorting === 'recent') return (Date.parse(second.addedAt || '') || 0) - (Date.parse(first.addedAt || '') || 0) || first.title.localeCompare(second.title);
+    return first.title.localeCompare(second.title);
+  });
   grid.innerHTML = matches.map(gameCard).join('');
   grid.hidden = matches.length === 0;
   emptyState.hidden = matches.length > 0;
@@ -129,6 +142,41 @@ function renderRecent() {
       <span class="recent-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(game.category)} · Pick up and play</span></span>
       <span class="recent-go" aria-hidden="true">↗</span>
     </a>`).join('');
+}
+
+function renderTrending() {
+  const picks = games.filter((game) => game.featured).slice(0, 3);
+  trendingGrid.innerHTML = picks.length
+    ? picks.map(gameCard).join('')
+    : '<p class="muted">Editor picks will appear here when a game is featured.</p>';
+}
+
+function renderRecentlyAdded() {
+  const recentGames = games.filter((game) => Number.isFinite(Date.parse(game.addedAt)))
+    .sort((first, second) => Date.parse(second.addedAt) - Date.parse(first.addedAt))
+    .slice(0, 6);
+  recentlyAddedSection.hidden = recentGames.length === 0;
+  recentlyAddedList.innerHTML = recentGames.map((game) => `
+    <a class="recent-item" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}">
+      <span class="recent-thumb">${game.thumbnail ? imageMarkup(game, 'recent-image') : escapeHtml(game.title.slice(0, 1))}</span>
+      <span class="recent-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(game.category)} · Added ${escapeHtml(new Date(game.addedAt).toLocaleDateString())}</span></span>
+      <span class="recent-go" aria-hidden="true">↗</span>
+    </a>`).join('');
+}
+
+const roadmapStatusLabels = {
+  idea: 'Idea', planned: 'Planned', 'in-progress': 'In Progress', testing: 'Testing', 'on-hold': 'On Hold',
+};
+
+function renderComingSoon() {
+  const items = roadmapItems.filter((item) => activeRoadmapCategory === 'all' || item.category === activeRoadmapCategory);
+  comingGrid.innerHTML = items.length ? items.map((item) => `
+    <article class="coming-card">
+      <div class="coming-card-top"><span class="roadmap-status-badge" data-status="${escapeHtml(item.status)}">${escapeHtml(roadmapStatusLabels[item.status] || item.status)}</span><span class="coming-category">${escapeHtml(item.category)}</span></div>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p>${escapeHtml(item.description)}</p>
+      <time datetime="${escapeHtml(item.updatedAt)}">Updated ${escapeHtml(new Date(item.updatedAt).toLocaleDateString())}</time>
+    </article>`).join('') : '<p class="muted">No public roadmap items are available right now.</p>';
 }
 
 function renderFeatured() {
@@ -188,6 +236,7 @@ function bindEvents() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(renderGames, reducedMotion ? 0 : 70);
   });
+  document.querySelector('#game-sort').addEventListener('change', renderGames);
 
   document.querySelector('#search-clear').addEventListener('click', () => {
     searchInput.value = '';
@@ -209,6 +258,12 @@ function bindEvents() {
     document.querySelector('#primary-nav').classList.remove('is-open');
     document.querySelector('#menu-toggle').setAttribute('aria-expanded', 'false');
     document.querySelector('#menu-toggle').setAttribute('aria-label', 'Open navigation');
+    document.body.classList.remove('nav-open');
+    document.querySelector('#nav-backdrop').hidden = true;
+  }));
+  document.querySelectorAll('[data-roadmap-category]').forEach((link) => link.addEventListener('click', () => {
+    activeRoadmapCategory = link.dataset.roadmapCategory;
+    renderComingSoon();
   }));
 
   document.querySelector('#feature-previous').addEventListener('click', () => showSlide(-1));
@@ -259,6 +314,9 @@ function bindEvents() {
     if (event.target.closest('#primary-nav a')) {
       document.querySelector('#primary-nav').classList.remove('is-open');
       document.querySelector('#menu-toggle').setAttribute('aria-expanded', 'false');
+      document.querySelector('#menu-toggle').setAttribute('aria-label', 'Open navigation');
+      document.body.classList.remove('nav-open');
+      document.querySelector('#nav-backdrop').hidden = true;
     }
   });
 
@@ -268,6 +326,15 @@ function bindEvents() {
     menuToggle.setAttribute('aria-expanded', String(open));
     menuToggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
     document.querySelector('#primary-nav').classList.toggle('is-open', open);
+    document.body.classList.toggle('nav-open', open);
+    document.querySelector('#nav-backdrop').hidden = !open;
+  });
+  document.querySelector('#nav-backdrop').addEventListener('click', () => {
+    document.querySelector('#primary-nav').classList.remove('is-open');
+    menuToggle.setAttribute('aria-expanded', 'false');
+    menuToggle.setAttribute('aria-label', 'Open navigation');
+    document.body.classList.remove('nav-open');
+    document.querySelector('#nav-backdrop').hidden = true;
   });
 
   document.addEventListener('keydown', (event) => {
@@ -285,6 +352,9 @@ function bindEvents() {
     if (event.key === 'Escape') {
       document.querySelector('#primary-nav').classList.remove('is-open');
       menuToggle.setAttribute('aria-expanded', 'false');
+      menuToggle.setAttribute('aria-label', 'Open navigation');
+      document.body.classList.remove('nav-open');
+      document.querySelector('#nav-backdrop').hidden = true;
       if (document.activeElement === searchInput && searchInput.value) {
         searchInput.value = '';
         renderGames();
@@ -300,7 +370,9 @@ function bindEvents() {
         navLinks.forEach((link) => link.classList.toggle('is-active', link.getAttribute('href') === `#${entry.target.id}`));
       }
     }, { rootMargin: '-25% 0px -65% 0px' });
-    document.querySelectorAll('#home, #games, #about').forEach((section) => observer.observe(section));
+    document.querySelectorAll('#home, #trending, #recently-added, #coming-soon, #games, #about').forEach((section) => {
+      if (!section.hidden) observer.observe(section);
+    });
   }
 }
 
@@ -477,6 +549,8 @@ function start() {
     renderFeatured();
     renderGames();
     renderRecent();
+    renderTrending();
+    renderRecentlyAdded();
     bindEvents();
     drawAmbient();
   }
@@ -489,8 +563,26 @@ async function loadPublicCatalog() {
   if (!Array.isArray(catalog)) throw new Error('The server returned an invalid game catalog.');
   games = catalog;
   byId = new Map(games.map((game) => [game.id, game]));
+  featuredGames = games.filter((game) => game.featured);
+  slides = featuredGames.length ? featuredGames : games;
+  slideIndex = 0;
 }
 
-loadPublicCatalog()
-  .catch((error) => console.error('Unable to load the live game catalog; using the generated catalog instead.', error))
-  .finally(start);
+async function loadRoadmap() {
+  try {
+    const response = await fetch('/api/roadmap', { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`Roadmap request failed (${response.status}).`);
+    const roadmap = await response.json();
+    if (!Array.isArray(roadmap)) throw new Error('The server returned an invalid roadmap.');
+    roadmapItems = roadmap;
+  } catch (error) {
+    console.error('Unable to load the public roadmap.', error);
+    roadmapItems = [];
+  }
+  renderComingSoon();
+}
+
+Promise.all([
+  loadPublicCatalog().catch((error) => console.error('Unable to load the live game catalog; using the generated catalog instead.', error)),
+  loadRoadmap(),
+]).finally(start);

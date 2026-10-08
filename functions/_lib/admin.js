@@ -5,6 +5,12 @@ import {
   validateFeedbackStatus,
   validateFeedbackSubmission,
 } from './feedback.js';
+import {
+  createInitialRoadmap,
+  ensureRoadmapState,
+  publicRoadmapItems,
+  validateRoadmapInput,
+} from './roadmap.js';
 
 const cookieName = 'octo_admin_session';
 const sessionMs = 8 * 60 * 60 * 1000;
@@ -56,6 +62,12 @@ function cookies(request) {
 function sameOrigin(request, url) {
   const origin = request.headers.get('origin');
   if (!origin) return true;
+    import {
+      createInitialRoadmap,
+      ensureRoadmapState,
+      publicRoadmapItems,
+      validateRoadmapInput,
+    } from './roadmap.js';
   try {
     return new URL(origin).origin === url.origin;
   } catch {
@@ -71,7 +83,8 @@ async function bodyJson(request) {
     body = JSON.parse(text);
   } catch {
     throw Object.assign(new Error('Request body must be valid JSON.'), { status: 400 });
-  }
+        const roadmapUpdated = ensureRoadmapState(state);
+        if (newGames.length || roadmapUpdated) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw Object.assign(new Error('Request body must be a JSON object.'), { status: 400 });
   }
@@ -82,6 +95,7 @@ function publicGame(game) {
   const { status, ...visible } = game;
   return visible;
 }
+          roadmap: state.roadmap,
 
 async function readStaticCatalog(request, env) {
   const catalogUrl = new URL('/Octo-Industries/BehindTheScenes/hub/catalog.js', request.url);
@@ -105,13 +119,17 @@ async function loadState(request, env) {
     }
     const existingIds = new Set(state.games.map((game) => game.id));
     const newGames = catalog.filter((game) => !existingIds.has(game.id)).map((game) => ({ ...game, status: 'published' }));
-    if (newGames.length) {
+    const roadmapUpdated = ensureRoadmapState(state);
+    if (newGames.length || roadmapUpdated) {
       state.games.push(...newGames);
       await saveState(env, state);
     }
     return state;
   }
-  const initial = { games: catalog.map((game) => ({ ...game, status: 'published' })), jobs: [], activity: [] };
+  const initial = {
+    games: catalog.map((game) => ({ ...game, status: 'published' })),
+    jobs: [], activity: [], roadmap: createInitialRoadmap(),
+  };
   await env.ADMIN_DB.prepare('INSERT OR IGNORE INTO admin_state (id, value) VALUES (1, ?)').bind(JSON.stringify(initial)).run();
   const stored = await env.ADMIN_DB.prepare('SELECT value FROM admin_state WHERE id = 1').first();
   return JSON.parse(stored.value);
@@ -395,6 +413,39 @@ export async function handleAdmin(request, env) {
     await ensureFeedbackSchema(env.ADMIN_DB);
   }
   const state = await loadState(request, env);
+  if (path === '/api/admin/roadmap' && request.method === 'GET') {
+    return json([...state.roadmap].sort((first, second) => second.updatedAt.localeCompare(first.updatedAt)));
+  }
+  if (path === '/api/admin/roadmap' && request.method === 'POST') {
+    const body = validateRoadmapInput(await bodyJson(request));
+    if (state.roadmap.length >= 500) return json({ error: 'The roadmap is limited to 500 items.' }, 409);
+    const now = new Date().toISOString();
+    const item = { id: randomToken().slice(0, 20), ...body, createdAt: now, updatedAt: now };
+    state.roadmap.unshift(item);
+    activity(state, `Added roadmap item: ${item.title}`);
+    await saveState(env, state);
+    return json(item, 201);
+  }
+  const roadmapMatch = /^\/api\/admin\/roadmap\/([a-z0-9-]+)$/.exec(path);
+  if (roadmapMatch) {
+    const [, id] = roadmapMatch;
+    const index = state.roadmap.findIndex((item) => item.id === id);
+    if (index < 0) return json({ error: 'Roadmap item not found.' }, 404);
+    if (request.method === 'PATCH') {
+      const updates = validateRoadmapInput(await bodyJson(request), { partial: true });
+      const item = { ...state.roadmap[index], ...updates, updatedAt: new Date().toISOString() };
+      state.roadmap[index] = item;
+      activity(state, `Updated roadmap item: ${item.title}`);
+      await saveState(env, state);
+      return json(item);
+    }
+    if (request.method === 'DELETE') {
+      const [item] = state.roadmap.splice(index, 1);
+      activity(state, `Deleted roadmap item: ${item.title}`);
+      await saveState(env, state);
+      return json({ deleted: true, id });
+    }
+  }
   if (path === '/api/admin/dashboard' && request.method === 'GET') {
     const games = state.games;
     const newFeedback = await env.ADMIN_DB.prepare(
@@ -413,6 +464,7 @@ export async function handleAdmin(request, env) {
       games,
       jobs: state.jobs.slice(0, 30),
       activity: state.activity.slice(0, 30),
+      roadmap: state.roadmap,
     });
   }
   if (path === '/api/admin/feedback' && request.method === 'GET') {
@@ -533,4 +585,10 @@ export async function handleCatalog(request, env) {
   return json(state.games.filter((game) => game.status === 'published').map(publicGame), 200, {
     'Cache-Control': 'public, max-age=60',
   });
+}
+
+export async function handleRoadmap(request, env) {
+  if (request.method !== 'GET') return json({ error: 'Method not allowed.' }, 405, { Allow: 'GET' });
+  const state = await loadState(request, env);
+  return json(publicRoadmapItems(state.roadmap), 200, { 'Cache-Control': 'public, max-age=60' });
 }

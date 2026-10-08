@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pbkdf2Sync, randomBytes, webcrypto } from 'node:crypto';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { handleAdmin, handleCatalog, handleFeedback } from './admin.js';
+import { handleAdmin, handleCatalog, handleFeedback, handleRoadmap } from './admin.js';
 import { onRequest as serveCompressedAsset } from '../Octo-Industries/Red-Ball-4/Build/[[path]].js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -202,6 +202,41 @@ test('Cloudflare admin login, CSRF protection, catalog edits, and logout', async
   const dashboard = await dashboardResponse.json();
   assert.ok(dashboard.counts.total > 0);
   assert.equal(dashboard.counts.newFeedback, 1);
+  assert.ok(dashboard.roadmap.length > 0);
+  assert.equal((await handleAdmin(new Request(`${baseUrl}/api/admin/roadmap`), env)).status, 401);
+  const publicRoadmapResponse = await handleRoadmap(new Request(`${baseUrl}/api/roadmap`), env);
+  assert.equal(publicRoadmapResponse.status, 200);
+  const publicRoadmap = await publicRoadmapResponse.json();
+  assert.ok(publicRoadmap.length > 0);
+  assert.ok(publicRoadmap.every((item) => !['released', 'archived'].includes(item.status) && !('internalNotes' in item)));
+
+  const roadmapHeaders = { Cookie: cookie, Origin: baseUrl, 'X-CSRF-Token': csrfToken, 'Content-Type': 'application/json' };
+  const missingRoadmapCsrf = await handleAdmin(new Request(`${baseUrl}/api/admin/roadmap`, {
+    method: 'POST', headers: { Cookie: cookie, Origin: baseUrl, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'Offline Hub', description: 'Cache the hub.' }),
+  }), env);
+  assert.equal(missingRoadmapCsrf.status, 403);
+  const roadmapCreate = await handleAdmin(new Request(`${baseUrl}/api/admin/roadmap`, {
+    method: 'POST', headers: roadmapHeaders,
+    body: JSON.stringify({ title: 'Offline Hub', description: 'Cache the hub.', category: 'platform', priority: 'high' }),
+  }), env);
+  assert.equal(roadmapCreate.status, 201);
+  const roadmapItem = await roadmapCreate.json();
+  const roadmapUpdate = await handleAdmin(new Request(`${baseUrl}/api/admin/roadmap/${roadmapItem.id}`, {
+    method: 'PATCH', headers: roadmapHeaders,
+    body: JSON.stringify({ status: 'in-progress', internalNotes: 'Check storage limits.' }),
+  }), env);
+  assert.equal(roadmapUpdate.status, 200);
+  const updatedRoadmapItem = await roadmapUpdate.json();
+  assert.equal(updatedRoadmapItem.status, 'in-progress');
+  const publicUpdatedRoadmap = await (await handleRoadmap(new Request(`${baseUrl}/api/roadmap`), env)).json();
+  const publicOfflineHub = publicUpdatedRoadmap.find((item) => item.id === roadmapItem.id);
+  assert.equal(publicOfflineHub.status, 'in-progress');
+  assert.equal('internalNotes' in publicOfflineHub, false);
+  const roadmapDelete = await handleAdmin(new Request(`${baseUrl}/api/admin/roadmap/${roadmapItem.id}`, {
+    method: 'DELETE', headers: roadmapHeaders,
+  }), env);
+  assert.equal(roadmapDelete.status, 200);
 
   const game = dashboard.games[0];
   const issueSubmission = await handleFeedback(new Request(`${baseUrl}/api/feedback`, {

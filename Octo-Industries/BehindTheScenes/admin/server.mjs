@@ -22,6 +22,12 @@ import {
   validateFeedbackStatus,
   validateFeedbackSubmission,
 } from '../../../functions/_lib/feedback.js';
+import {
+  createInitialRoadmap,
+  ensureRoadmapState,
+  publicRoadmapItems,
+  validateRoadmapInput,
+} from '../../../functions/_lib/roadmap.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const project = resolve(root, 'Octo-Industries/BehindTheScenes');
@@ -229,6 +235,7 @@ async function loadState() {
         state.feedback = [];
         changed = true;
       }
+      if (ensureRoadmapState(state)) changed = true;
       const existingIds = new Set(state.games.map((game) => game.id));
       for (const game of catalog) {
         if (!existingIds.has(game.id)) {
@@ -244,7 +251,10 @@ async function loadState() {
         }
       }
     } else {
-      state = { games: catalog.map((game) => ({ ...game, status: 'published' })), jobs: [], activity: [], proposals: [], feedback: [] };
+      state = {
+        games: catalog.map((game) => ({ ...game, status: 'published' })),
+        jobs: [], activity: [], proposals: [], feedback: [], roadmap: createInitialRoadmap(),
+      };
       changed = true;
     }
     state.jobs = state.jobs.slice(-100);
@@ -269,6 +279,7 @@ async function loadState() {
         job.message = 'The server restarted before this job completed. Retry it to continue.';
       }
     }
+    ensureRoadmapState(state);
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
     state = {
@@ -277,6 +288,7 @@ async function loadState() {
       activity: [],
       proposals: [],
       feedback: [],
+      roadmap: createInitialRoadmap(),
     };
   }
   state.jobs = state.jobs.slice(-100);
@@ -805,6 +817,10 @@ async function handleRequest(request, response) {
     sendJson(response, 200, state.games.filter((game) => game.status === 'published').map(publicGame));
     return;
   }
+  if (request.method === 'GET' && pathname === '/api/roadmap') {
+    sendJson(response, 200, publicRoadmapItems(state.roadmap), { 'Cache-Control': 'public, max-age=60' });
+    return;
+  }
   if (pathname === '/api/feedback') {
     if (request.method !== 'POST') {
       sendJson(response, 405, { error: 'Method not allowed.' }, { Allow: 'POST' });
@@ -1002,8 +1018,52 @@ async function handleRequest(request, response) {
         activity: state.activity.slice(0, 30),
         proposals: state.proposals.filter((proposal) => ['pending', 'approved'].includes(proposal.status)).slice(0, 20),
         capabilities: { changeProposals: Boolean(githubToken) },
+        roadmap: state.roadmap,
       });
       return;
+    }
+    if (pathname === '/api/admin/roadmap' && request.method === 'GET') {
+      sendJson(response, 200, [...state.roadmap].sort((first, second) => second.updatedAt.localeCompare(first.updatedAt)));
+      return;
+    }
+    if (pathname === '/api/admin/roadmap' && request.method === 'POST') {
+      const body = validateRoadmapInput(await readJson(request));
+      if (state.roadmap.length >= 500) {
+        sendJson(response, 409, { error: 'The roadmap is limited to 500 items.' });
+        return;
+      }
+      const now = new Date().toISOString();
+      const item = { id: randomBytes(10).toString('hex'), ...body, createdAt: now, updatedAt: now };
+      state.roadmap.unshift(item);
+      recordActivity(`Added roadmap item: ${item.title}`);
+      await saveState();
+      sendJson(response, 201, item);
+      return;
+    }
+    const roadmapMatch = /^\/api\/admin\/roadmap\/([a-z0-9-]+)$/.exec(pathname);
+    if (roadmapMatch) {
+      const [, id] = roadmapMatch;
+      const index = state.roadmap.findIndex((item) => item.id === id);
+      if (index < 0) {
+        sendJson(response, 404, { error: 'Roadmap item not found.' });
+        return;
+      }
+      if (request.method === 'PATCH') {
+        const updates = validateRoadmapInput(await readJson(request), { partial: true });
+        const item = { ...state.roadmap[index], ...updates, updatedAt: new Date().toISOString() };
+        state.roadmap[index] = item;
+        recordActivity(`Updated roadmap item: ${item.title}`);
+        await saveState();
+        sendJson(response, 200, item);
+        return;
+      }
+      if (request.method === 'DELETE') {
+        const [item] = state.roadmap.splice(index, 1);
+        recordActivity(`Deleted roadmap item: ${item.title}`);
+        await saveState();
+        sendJson(response, 200, { deleted: true, id });
+        return;
+      }
     }
     if (pathname === '/api/admin/feedback' && request.method === 'GET') {
       await ensureFeedbackSchema();

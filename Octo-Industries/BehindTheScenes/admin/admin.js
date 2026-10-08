@@ -6,18 +6,25 @@ const logoutButton = document.querySelector('#logout-button');
 const toast = document.querySelector('#toast');
 let csrfToken = '';
 let dashboard;
+let roadmapItems = [];
 const chatHistory = [];
 let refreshTimer;
 let toastTimer;
 let feedbackEntries = [];
 const openedFeedback = new Set();
 const selectedFeedback = new Set();
+const roadmapStatusLabels = {
+  idea: 'Idea', planned: 'Planned', 'in-progress': 'In Progress', testing: 'Testing',
+  released: 'Released', 'on-hold': 'On Hold', archived: 'Archived',
+};
+const roadmapPriorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
 const adminViews = {
   overview: { title: 'Admin Dashboard', description: 'Your compact operations overview.' },
   games: { title: 'Game Library', description: 'Search, filter, update metadata, publish, and run game health checks.' },
   community: { title: 'Community Inbox', description: 'Review suggestions and issues, update status, and save private notes.' },
   operations: { title: 'Operations', description: 'Inspect source pages, review background jobs, and monitor admin activity.' },
   ai: { title: 'AI Center', description: 'Ask about the library and review proposed changes before approval.' },
+  roadmap: { title: 'Roadmap', description: 'Track, prioritize, and publish platform development updates from one source of truth.' },
 };
 
 function escapeHtml(value = '') {
@@ -279,6 +286,7 @@ function updateMetrics(counts, games, activity) {
   document.querySelector('#nav-game-count').textContent = games.length;
   document.querySelector('#nav-feedback-count').textContent = openFeedback;
   document.querySelector('#nav-failed-count').textContent = counts.failedJobs;
+  document.querySelector('#nav-roadmap-count').textContent = roadmapItems.filter((item) => !['released', 'archived'].includes(item.status)).length;
 }
 
 function renderOverview() {
@@ -307,6 +315,96 @@ function renderOverview() {
     <span class="overview-row-copy"><strong>${escapeHtml(entry.type === 'issue' ? 'Issue' : 'Suggestion')} · ${escapeHtml(entry.gameId ? gameTitles.get(entry.gameId) || 'Unknown game' : 'Platform')}</strong><span>${escapeHtml(entry.message.slice(0, 92))}${entry.message.length > 92 ? '…' : ''}</span></span>
     <span class="feedback-type" data-type="${escapeHtml(entry.type)}">${escapeHtml(entry.status)}</span>
   </button>`).join('') : '<p class="muted overview-empty">No feedback yet.</p>';
+
+  const summary = document.querySelector('#roadmap-summary');
+  const statusOrder = ['idea', 'planned', 'in-progress', 'testing', 'released', 'on-hold'];
+  summary.innerHTML = statusOrder.map((status) => `<button class="roadmap-summary-item" type="button" data-roadmap-filter="${status}">
+    <span>${escapeHtml(roadmapStatusLabels[status])}</span><strong>${roadmapItems.filter((item) => item.status === status).length}</strong>
+  </button>`).join('');
+  renderRoadmapLabels();
+}
+
+function renderRoadmapLabels() {
+  const items = new Map(roadmapItems.map((item) => [item.id, item]));
+  document.querySelectorAll('[data-roadmap-label]').forEach((label) => {
+    const item = items.get(label.dataset.roadmapLabel);
+    if (item) {
+      label.textContent = roadmapStatusLabels[item.status] || item.status;
+      label.dataset.status = item.status;
+      label.closest('.nav-item')?.classList.toggle('is-planned', !['in-progress', 'released'].includes(item.status));
+    }
+  });
+}
+
+function renderRoadmap() {
+  const query = document.querySelector('#roadmap-search').value.trim().toLocaleLowerCase();
+  const status = document.querySelector('#roadmap-status-filter').value;
+  const category = document.querySelector('#roadmap-category-filter').value;
+  const priority = document.querySelector('#roadmap-priority-filter').value;
+  const sorting = document.querySelector('#roadmap-sort').value;
+  const filtered = roadmapItems.filter((item) => {
+    const searchable = [item.title, item.description, item.category, item.priority, item.status, item.internalNotes].join(' ').toLocaleLowerCase();
+    return (!query || searchable.includes(query))
+      && (status === 'all' || item.status === status)
+      && (category === 'all' || item.category === category)
+      && (priority === 'all' || item.priority === priority);
+  });
+  filtered.sort((first, second) => {
+    if (sorting === 'title') return first.title.localeCompare(second.title);
+    if (sorting === 'created') return second.createdAt.localeCompare(first.createdAt);
+    if (sorting === 'priority') return roadmapPriorityOrder[first.priority] - roadmapPriorityOrder[second.priority] || second.updatedAt.localeCompare(first.updatedAt);
+    return second.updatedAt.localeCompare(first.updatedAt);
+  });
+  const list = document.querySelector('#roadmap-list');
+  const summaryContainer = document.querySelector('#roadmap-status-summary');
+  const summaryStatuses = ['idea', 'planned', 'in-progress', 'testing', 'released', 'on-hold', 'archived'];
+  summaryContainer.innerHTML = summaryStatuses.map((value) => `<button class="roadmap-status-card" type="button" data-roadmap-filter="${value}" aria-pressed="${status === value}">
+    <span>${escapeHtml(roadmapStatusLabels[value])}</span><strong>${roadmapItems.filter((item) => item.status === value).length}</strong>
+  </button>`).join('');
+  list.innerHTML = filtered.length ? filtered.map((item) => `<tr>
+    <td><strong>${escapeHtml(item.title)}</strong><span class="roadmap-description">${escapeHtml(item.description)}</span></td>
+    <td><span class="roadmap-status" data-status="${escapeHtml(item.status)}">${escapeHtml(roadmapStatusLabels[item.status])}</span></td>
+    <td>${escapeHtml(item.category)}</td>
+    <td><span class="roadmap-priority" data-priority="${escapeHtml(item.priority)}">${escapeHtml(item.priority)}</span></td>
+    <td><time datetime="${escapeHtml(item.createdAt)}">${escapeHtml(formatDate(item.createdAt))}</time></td>
+    <td><time datetime="${escapeHtml(item.updatedAt)}">${escapeHtml(formatDate(item.updatedAt))}</time></td>
+    <td><div class="roadmap-actions">
+      <button class="small-button" type="button" data-roadmap-action="edit" data-id="${escapeHtml(item.id)}" aria-label="Edit ${escapeHtml(item.title)}" title="Edit">Edit</button>
+      <button class="small-button" type="button" data-roadmap-action="archive" data-id="${escapeHtml(item.id)}" aria-label="${item.status === 'archived' ? 'Restore' : 'Archive'} ${escapeHtml(item.title)}" title="${item.status === 'archived' ? 'Restore' : 'Archive'}">${item.status === 'archived' ? 'Restore' : 'Archive'}</button>
+      <button class="small-button roadmap-delete" type="button" data-roadmap-action="delete" data-id="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(item.title)}" title="Delete">Delete</button>
+    </div></td>
+  </tr>`).join('') : '<tr><td colspan="7"><p class="muted roadmap-empty">No roadmap features match these filters.</p></td></tr>';
+  document.querySelector('#roadmap-count').textContent = `${filtered.length} of ${roadmapItems.length} features`;
+  renderOverview();
+}
+
+function searchAdmin(query) {
+  if (!query) return [];
+  const normalized = query.toLocaleLowerCase();
+  const gameResults = (dashboard?.games || []).filter((game) => [game.title, game.category, game.description, ...(game.tags || [])]
+    .join(' ').toLocaleLowerCase().includes(normalized))
+    .map((game) => ({ type: 'games', id: game.id, title: game.title, detail: `Game · ${game.category}` }));
+  const feedbackResults = feedbackEntries.filter((entry) => [entry.message, entry.type, entry.status, entry.gameId]
+    .join(' ').toLocaleLowerCase().includes(normalized))
+    .map((entry) => ({ type: 'community', id: entry.id, title: entry.message.slice(0, 100), detail: `Feedback · ${entry.status}` }));
+  const roadmapResults = roadmapItems.filter((item) => [item.title, item.description, item.category, item.status, item.priority, item.internalNotes]
+    .join(' ').toLocaleLowerCase().includes(normalized))
+    .map((item) => ({ type: 'roadmap', id: item.id, title: item.title, detail: `Roadmap · ${roadmapStatusLabels[item.status]}` }));
+  const jobResults = (dashboard?.jobs || []).filter((job) => [job.type, job.gameId, job.status, job.message]
+    .join(' ').toLocaleLowerCase().includes(normalized))
+    .map((job) => ({ type: 'operations', id: job.id, title: job.message, detail: `Job · ${job.status}` }));
+  return [...gameResults, ...feedbackResults, ...roadmapResults, ...jobResults].slice(0, 8);
+}
+
+function renderGlobalSearch() {
+  const input = document.querySelector('#global-admin-search');
+  const results = document.querySelector('#global-search-results');
+  const matches = searchAdmin(input.value.trim());
+  results.innerHTML = matches.length ? matches.map((item) => `<button class="global-search-result" type="button" role="option" data-search-view="${item.type}" data-search-id="${escapeHtml(item.id)}" data-search-title="${escapeHtml(item.title)}">
+    <span>${escapeHtml(item.title)}</span><small>${escapeHtml(item.detail)}</small>
+  </button>`).join('') : input.value.trim() ? '<p class="global-search-empty">No matching games, feedback, roadmap items, or jobs.</p>' : '';
+  results.hidden = !matches.length && !input.value.trim();
+  input.setAttribute('aria-expanded', String(!results.hidden));
 }
 
 function renderGames() {
@@ -350,7 +448,11 @@ function renderGames() {
 
 function renderJobs() {
   const container = document.querySelector('#job-list');
-  container.innerHTML = dashboard.jobs.length ? dashboard.jobs.slice(0, 12).map((job) => {
+  const query = document.querySelector('#job-search').value.trim().toLocaleLowerCase();
+  const jobs = [...dashboard.jobs].filter((job) => [job.type, job.gameId, job.status, job.message].join(' ').toLocaleLowerCase().includes(query));
+  jobs.sort((first, second) => Number(second.status === 'failed') - Number(first.status === 'failed')
+    || Date.parse(second.createdAt) - Date.parse(first.createdAt));
+  container.innerHTML = jobs.length ? jobs.slice(0, 30).map((job) => {
     const result = job.result;
     let resultMarkup = '';
     if (result?.resources) {
@@ -546,12 +648,14 @@ async function updateFeedbackStatus(id, status) {
 async function refreshDashboard() {
   dashboard = await api('/api/admin/dashboard');
   feedbackEntries = await api('/api/admin/feedback');
+  roadmapItems = Array.isArray(dashboard.roadmap) ? dashboard.roadmap : await api('/api/admin/roadmap');
   updateMetrics(dashboard.counts, dashboard.games, dashboard.activity);
   renderGames();
   renderJobs();
   renderActivity();
   renderProposals();
   renderFeedback();
+  renderRoadmap();
   renderOverview();
   if (dashboard.jobs.some((job) => job.status === 'queued' || job.status === 'running')) {
     if (!refreshTimer) refreshTimer = setInterval(() => refreshDashboard().catch((error) => showToast(error.message)), 2200);
@@ -944,4 +1048,141 @@ document.querySelector('#sidebar-collapse').addEventListener('click', () => {
 });
 window.addEventListener('resize', () => {
   if (!dashboardView.hidden) syncSidebarMode();
+});
+document.querySelector('#job-search').addEventListener('input', renderJobs);
+
+function openRoadmapEditor(item = null) {
+  const form = document.querySelector('#roadmap-form');
+  form.reset();
+  document.querySelector('#roadmap-id').value = item?.id || '';
+  document.querySelector('#roadmap-title-input').value = item?.title || '';
+  document.querySelector('#roadmap-description').value = item?.description || '';
+  document.querySelector('#roadmap-status').value = item?.status || 'idea';
+  document.querySelector('#roadmap-category').value = item?.category || 'platform';
+  document.querySelector('#roadmap-priority').value = item?.priority || 'normal';
+  document.querySelector('#roadmap-notes').value = item?.internalNotes || '';
+  document.querySelector('#roadmap-dialog-title').textContent = item ? 'Edit roadmap feature' : 'Create roadmap feature';
+  document.querySelector('#roadmap-save').textContent = item ? 'Save changes' : 'Create feature';
+  showMessage(document.querySelector('#roadmap-message'), '');
+  document.querySelector('#roadmap-dialog').showModal();
+  document.querySelector('#roadmap-title-input').focus();
+}
+
+document.querySelector('#roadmap-create').addEventListener('click', () => openRoadmapEditor());
+document.querySelector('#roadmap-close').addEventListener('click', () => document.querySelector('#roadmap-dialog').close());
+document.querySelector('#roadmap-cancel').addEventListener('click', () => document.querySelector('#roadmap-dialog').close());
+document.querySelector('#roadmap-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.querySelector('#roadmap-save');
+  const id = document.querySelector('#roadmap-id').value;
+  const body = {
+    title: document.querySelector('#roadmap-title-input').value.trim(),
+    description: document.querySelector('#roadmap-description').value.trim(),
+    status: document.querySelector('#roadmap-status').value,
+    category: document.querySelector('#roadmap-category').value,
+    priority: document.querySelector('#roadmap-priority').value,
+    internalNotes: document.querySelector('#roadmap-notes').value.trim(),
+  };
+  button.disabled = true;
+  try {
+    await api(id ? `/api/admin/roadmap/${encodeURIComponent(id)}` : '/api/admin/roadmap', {
+      method: id ? 'PATCH' : 'POST',
+      body: JSON.stringify(body),
+    });
+    document.querySelector('#roadmap-dialog').close();
+    showToast(id ? 'Roadmap feature updated.' : 'Roadmap feature created.');
+    await refreshDashboard();
+  } catch (error) {
+    showMessage(document.querySelector('#roadmap-message'), error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector('#roadmap-list').addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-roadmap-action]');
+  if (!button) return;
+  const item = roadmapItems.find((entry) => entry.id === button.dataset.id);
+  if (!item) return;
+  const action = button.dataset.roadmapAction;
+  if (action === 'edit') {
+    openRoadmapEditor(item);
+    return;
+  }
+  if (action === 'delete' && !window.confirm(`Permanently delete “${item.title}” from the roadmap?`)) return;
+  button.disabled = true;
+  try {
+    if (action === 'delete') {
+      await api(`/api/admin/roadmap/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+      showToast('Roadmap feature deleted.');
+    } else {
+      const status = item.status === 'archived' ? 'planned' : 'archived';
+      await api(`/api/admin/roadmap/${encodeURIComponent(item.id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      showToast(status === 'archived' ? 'Roadmap feature archived.' : 'Roadmap feature restored to Planned.');
+    }
+    await refreshDashboard();
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+  }
+});
+
+for (const selector of ['#roadmap-search', '#roadmap-status-filter', '#roadmap-category-filter', '#roadmap-priority-filter', '#roadmap-sort']) {
+  document.querySelector(selector).addEventListener(selector === '#roadmap-search' ? 'input' : 'change', renderRoadmap);
+}
+
+document.querySelector('#roadmap-status-summary').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-roadmap-filter]');
+  if (!button) return;
+  document.querySelector('#roadmap-status-filter').value = button.dataset.roadmapFilter;
+  setAdminView('roadmap');
+  renderRoadmap();
+});
+
+document.querySelector('#roadmap-summary').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-roadmap-filter]');
+  if (!button) return;
+  document.querySelector('#roadmap-status-filter').value = button.dataset.roadmapFilter;
+  setAdminView('roadmap');
+  renderRoadmap();
+});
+
+const globalSearch = document.querySelector('#global-admin-search');
+const globalSearchResults = document.querySelector('#global-search-results');
+globalSearch.addEventListener('input', renderGlobalSearch);
+globalSearch.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    globalSearch.value = '';
+    renderGlobalSearch();
+  } else if (event.key === 'Enter') {
+    event.preventDefault();
+    globalSearchResults.querySelector('.global-search-result')?.click();
+  }
+});
+globalSearchResults.addEventListener('click', (event) => {
+  const result = event.target.closest('[data-search-view]');
+  if (!result) return;
+  const { searchView: view, searchId: id, searchTitle: title } = result.dataset;
+  setAdminView(view);
+  if (view === 'games') {
+    document.querySelector('#game-filter').value = title;
+    renderGames();
+  } else if (view === 'community') {
+    document.querySelector('#feedback-search').value = title;
+    openedFeedback.add(id);
+    renderFeedback();
+    const details = feedbackList.querySelector(`[data-feedback-details="${id}"]`);
+    if (details) details.open = true;
+  } else if (view === 'roadmap') {
+    document.querySelector('#roadmap-search').value = title;
+    renderRoadmap();
+  } else {
+    document.querySelector('#job-search').value = title;
+    renderJobs();
+  }
+  globalSearch.value = '';
+  renderGlobalSearch();
 });
