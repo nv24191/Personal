@@ -8,6 +8,12 @@ const source = 'https://freetoplayz.github.io/ragdoll-hit/';
 const maximumSize = 30 * 1024 * 1024;
 const assets = [
   {
+    path: 'MobileDetect.js',
+    size: 39586,
+    sha256: '929AE5416530AE6C38F1245656403B2A3A51D8C27C46A60CAB6718A19E35235B',
+    signature: '',
+  },
+  {
     path: 'Build/v84.loader.js',
     size: 114199,
     sha256: '36ADF7CAAD3C3113A57F499C741359ACA6C12A11051A4291FA7F5F77976BC992',

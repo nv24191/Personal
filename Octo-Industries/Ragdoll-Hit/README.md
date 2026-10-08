@@ -1,6 +1,6 @@
 # Ragdoll Hit
 
-This entry hosts the original Unity WebGL build from the source site's game-only host. The article/embed wrapper, Poki SDK, advertisements, analytics scripts, and unrelated portal content are not included. A local no-op Poki compatibility shim preserves the game's expected callbacks while disabling ad breaks and external SDK requests. The game starts from the local Unity 2022.3.6f1 loader and local files in `Build/`.
+This entry hosts the original Unity WebGL build from the source site's game-only host. The article/embed wrapper, Poki SDK, advertisements, analytics scripts, and unrelated portal content are not included. The source's standalone `MobileDetect.js` dependency is hosted locally, and a local no-op Poki compatibility shim preserves expected callbacks while disabling ad breaks and external SDK requests. The game starts from the local Unity 2022.3.6f1 loader and local files in `Build/`.
 
 The `npm run sync` pre-sync step fetches any missing Unity runtime files and the two real gameplay screenshots, validating each file's expected size, signature, and SHA-256 before catalog generation. The Unity data archive contains seven embedded game files; no separate `StreamingAssets` directory or external runtime URLs were found in its metadata/data scan.
 

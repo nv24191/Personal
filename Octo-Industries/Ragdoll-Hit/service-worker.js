@@ -2,6 +2,7 @@ const cacheName = 'octo-ragdoll-hit-v1';
 const cachedAssets = [
   './',
   './index.html',
+  './MobileDetect.js',
   './poki-sdk-compat.js',
   './Build/v84.loader.js',
   './Build/3276aa7c11496bcc48eb6908f112f0c3.js.unityweb',
