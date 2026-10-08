@@ -2,7 +2,7 @@
   "name": "octo-industries-game-hub",
   "private": true,
   "scripts": {
-    "presync": "node scripts/fetch-baggio-magical-kicks.mjs",
+    "presync": "node scripts/fetch-baggio-magical-kicks.mjs && node scripts/fetch-ragdoll-hit.mjs",
     "sync": "node scripts/sync-games.mjs",
     "build": "node scripts/sync-games.mjs",
     "start": "node admin/server.mjs",
