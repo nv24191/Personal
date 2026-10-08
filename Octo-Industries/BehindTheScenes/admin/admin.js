@@ -12,6 +12,13 @@ let toastTimer;
 let feedbackEntries = [];
 const openedFeedback = new Set();
 const selectedFeedback = new Set();
+const adminViews = {
+  overview: { title: 'Admin Dashboard', description: 'Your compact operations overview.' },
+  games: { title: 'Game Library', description: 'Search, filter, update metadata, publish, and run game health checks.' },
+  community: { title: 'Community Inbox', description: 'Review suggestions and issues, update status, and save private notes.' },
+  operations: { title: 'Operations', description: 'Inspect source pages, review background jobs, and monitor admin activity.' },
+  ai: { title: 'AI Center', description: 'Ask about the library and review proposed changes before approval.' },
+};
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -189,6 +196,7 @@ function showToast(message) {
 function showLogin(message = '') {
   clearInterval(refreshTimer);
   csrfToken = '';
+  setDrawerOpen(false);
   dashboardView.hidden = true;
   loginView.hidden = false;
   logoutButton.hidden = true;
@@ -199,6 +207,56 @@ function showDashboard() {
   loginView.hidden = true;
   dashboardView.hidden = false;
   logoutButton.hidden = false;
+  setAdminView('overview');
+  syncSidebarMode();
+}
+
+function safeStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    return;
+  }
+}
+
+function syncSidebarMode() {
+  const savedCollapse = safeStorageGet('octo-admin.sidebar-collapsed');
+  const collapsed = window.innerWidth > 760 && (savedCollapse === null ? window.innerWidth <= 1399 : savedCollapse === 'true');
+  dashboardView.classList.toggle('sidebar-collapsed', collapsed);
+}
+
+function setDrawerOpen(open) {
+  dashboardView.classList.toggle('drawer-open', open);
+  const toggle = document.querySelector('#sidebar-drawer-toggle');
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+  }
+}
+
+function setAdminView(name, focusTarget = '') {
+  const view = adminViews[name] ? name : 'overview';
+  const meta = adminViews[view];
+  for (const panel of document.querySelectorAll('[data-admin-panel]')) panel.hidden = panel.dataset.adminPanel !== view;
+  for (const button of document.querySelectorAll('#admin-sidebar [data-admin-view]')) {
+    const active = button.dataset.adminView === view && !button.dataset.focusTarget;
+    button.classList.toggle('is-active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  }
+  document.querySelector('#admin-view-title').textContent = meta.title;
+  document.querySelector('#admin-view-description').textContent = meta.description;
+  document.title = `${meta.title} | Octo Industries`;
+  setDrawerOpen(false);
+  if (focusTarget) window.setTimeout(() => document.querySelector(focusTarget)?.focus({ preventScroll: true }), 40);
 }
 
 function formatDate(value) {
@@ -207,13 +265,48 @@ function formatDate(value) {
 }
 
 function updateMetrics(counts, games, activity) {
+  const openFeedback = feedbackEntries.filter((entry) => !['resolved', 'archived'].includes(entry.status)).length;
+  const today = new Date().toDateString();
+  const activityToday = activity.filter((item) => new Date(item.createdAt).toDateString() === today).length;
   document.querySelector('#metric-total').textContent = counts.total;
   document.querySelector('#metric-published').textContent = counts.published;
   document.querySelector('#metric-drafts').textContent = counts.drafts;
-  document.querySelector('#metric-offline').textContent = counts.offlineReady;
+  document.querySelector('#metric-open-feedback').textContent = openFeedback;
   document.querySelector('#metric-failed').textContent = counts.failedJobs;
+  document.querySelector('#metric-offline').textContent = counts.offlineReady;
   document.querySelector('#metric-categories').textContent = new Set(games.map((game) => game.category).filter(Boolean)).size;
-  document.querySelector('#metric-activity').textContent = activity.length;
+  document.querySelector('#metric-activity-today').textContent = activityToday;
+  document.querySelector('#nav-game-count').textContent = games.length;
+  document.querySelector('#nav-feedback-count').textContent = openFeedback;
+  document.querySelector('#nav-failed-count').textContent = counts.failedJobs;
+}
+
+function renderOverview() {
+  const jobs = [...(dashboard?.jobs || [])].sort((first, second) => {
+    const failedOrder = Number(second.status === 'failed') - Number(first.status === 'failed');
+    return failedOrder || Date.parse(second.createdAt) - Date.parse(first.createdAt);
+  }).slice(0, 4);
+  const activity = dashboard?.activity || [];
+  const feedback = [...feedbackEntries].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt)).slice(0, 4);
+  const jobsContainer = document.querySelector('#overview-jobs');
+  const activityContainer = document.querySelector('#overview-activity');
+  const feedbackContainer = document.querySelector('#overview-feedback');
+
+  jobsContainer.innerHTML = jobs.length ? jobs.map((job) => `<button class="overview-row" type="button" data-admin-view="operations">
+    <span class="overview-row-copy"><strong>${escapeHtml(job.type)}${job.gameId ? ` · ${escapeHtml(job.gameId)}` : ''}</strong><span>${escapeHtml(job.message)}</span></span>
+    <span class="job-status" data-status="${escapeHtml(job.status)}">${escapeHtml(job.status)}</span>
+  </button>`).join('') : '<p class="muted overview-empty">No recent jobs.</p>';
+
+  activityContainer.innerHTML = activity.length ? activity.slice(0, 4).map((item) => `<button class="overview-row" type="button" data-admin-view="operations">
+    <span class="overview-row-copy"><strong>${escapeHtml(item.message)}</strong><span>${escapeHtml(formatDate(item.createdAt))}</span></span>
+    <span class="overview-arrow" aria-hidden="true">↗</span>
+  </button>`).join('') : '<p class="muted overview-empty">No recent activity.</p>';
+
+  const gameTitles = new Map((dashboard?.games || []).map((game) => [game.id, game.title]));
+  feedbackContainer.innerHTML = feedback.length ? feedback.map((entry) => `<button class="overview-row" type="button" data-feedback-open="${escapeHtml(entry.id)}">
+    <span class="overview-row-copy"><strong>${escapeHtml(entry.type === 'issue' ? 'Issue' : 'Suggestion')} · ${escapeHtml(entry.gameId ? gameTitles.get(entry.gameId) || 'Unknown game' : 'Platform')}</strong><span>${escapeHtml(entry.message.slice(0, 92))}${entry.message.length > 92 ? '…' : ''}</span></span>
+    <span class="feedback-type" data-type="${escapeHtml(entry.type)}">${escapeHtml(entry.status)}</span>
+  </button>`).join('') : '<p class="muted overview-empty">No feedback yet.</p>';
 }
 
 function renderGames() {
@@ -459,6 +552,7 @@ async function refreshDashboard() {
   renderActivity();
   renderProposals();
   renderFeedback();
+  renderOverview();
   if (dashboard.jobs.some((job) => job.status === 'queued' || job.status === 'running')) {
     if (!refreshTimer) refreshTimer = setInterval(() => refreshDashboard().catch((error) => showToast(error.message)), 2200);
   } else {
@@ -822,3 +916,32 @@ async function initialize() {
 }
 
 initialize();
+
+document.querySelector('#dashboard-view').addEventListener('click', (event) => {
+  const feedbackButton = event.target.closest('[data-feedback-open]');
+  if (feedbackButton) {
+    const id = feedbackButton.dataset.feedbackOpen;
+    openedFeedback.add(id);
+    setAdminView('community');
+    renderFeedback();
+    const details = feedbackList.querySelector(`[data-feedback-details="${id}"]`);
+    if (details) details.open = true;
+    return;
+  }
+  const button = event.target.closest('[data-admin-view]');
+  if (button && !button.disabled) setAdminView(button.dataset.adminView, button.dataset.focusTarget || '');
+});
+
+document.querySelector('#sidebar-drawer-toggle').addEventListener('click', () => {
+  setDrawerOpen(!dashboardView.classList.contains('drawer-open'));
+});
+document.querySelector('#sidebar-scrim').addEventListener('click', () => setDrawerOpen(false));
+document.querySelector('#sidebar-collapse').addEventListener('click', () => {
+  const collapsed = !dashboardView.classList.contains('sidebar-collapsed');
+  dashboardView.classList.toggle('sidebar-collapsed', collapsed);
+  safeStorageSet('octo-admin.sidebar-collapsed', String(collapsed));
+  document.querySelector('#sidebar-collapse').setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
+});
+window.addEventListener('resize', () => {
+  if (!dashboardView.hidden) syncSidebarMode();
+});
