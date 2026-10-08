@@ -276,10 +276,16 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .about-section::after { position: absolute; top: -112px; right: max(calc((100vw - var(--page-width)) / 2), 6%); width: 310px; aspect-ratio: 1; border: 1px solid rgba(101, 230, 227, .13); border-radius: 50%; box-shadow: 0 0 0 34px rgba(101, 230, 227, .026), 0 0 0 76px rgba(101, 230, 227, .018); content: ''; pointer-events: none; }
 .about-inner { display: flex; min-height: 300px; align-items: center; gap: clamp(26px, 6vw, 83px); padding-block: 47px; }
 .about-emblem { display: block; width: 86px; height: 86px; flex: 0 0 auto; object-fit: contain; filter: drop-shadow(0 0 18px rgba(242, 139, 135, .16)); }
+.about-copy { min-width: 0; max-width: 760px; flex: 1; }
 .about-section .eyebrow { margin-bottom: 14px; }
 .about-section h2 { font-size: 62px; line-height: .9; }
 .about-section h2 > span { font-size: 1.08em; }
-.about-section p:not(.eyebrow) { max-width: 390px; margin: 12px 0 0; color: #93a9b2; font-size: 12px; line-height: 1.7; }
+.about-section p:not(.eyebrow) { max-width: 680px; margin: 12px 0 0; color: #93a9b2; font-size: 12px; line-height: 1.7; }
+.about-section .about-mission { color: var(--cyan); font-weight: 700; }
+.about-contact { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); }
+.about-contact .text-link { min-height: 32px; color: var(--cyan); }
+.about-contact .text-link:hover { color: var(--paper); }
+.about-contact .button { margin-top: 14px; }
 .about-link { display: grid; width: 46px; height: 46px; flex: 0 0 auto; place-items: center; margin-left: auto; border: 1px solid rgba(101, 230, 227, .35); color: var(--cyan); font-size: 18px; transition: background .2s ease, color .2s ease; }
 .about-link:hover { background: var(--cyan); color: var(--night); }
 .site-footer { display: flex; min-height: 86px; align-items: center; justify-content: space-between; gap: 20px; color: #71858d; font-size: 9px; }
