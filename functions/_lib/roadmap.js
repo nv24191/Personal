@@ -143,9 +143,16 @@ export function ensureRoadmapState(state) {
   return true;
 }
 
+export function futureRoadmapItems(items) {
+  return items.filter((item) => !['released', 'archived'].includes(item.status));
+}
+
+export function releasedRoadmapItems(items) {
+  return items.filter((item) => item.status === 'released');
+}
+
 export function publicRoadmapItems(items) {
-  return items
-    .filter((item) => !['released', 'archived'].includes(item.status))
+  return futureRoadmapItems(items)
     .map(({ internalNotes, ...item }) => item)
     .sort((first, second) => Date.parse(second.updatedAt) - Date.parse(first.updatedAt));
 }

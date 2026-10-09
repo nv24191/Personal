@@ -189,23 +189,45 @@ function renderDashboardOverview() {
   if (welcomeCopy) welcomeCopy.textContent = `${String(currentGames.length || 0)} Games Ready to Play`;
 }
 
+function getUpcomingRoadmapItems() {
+  return [...roadmapItems]
+    .filter((item) => !['released', 'archived'].includes(item.status))
+    .sort((first, second) => Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0));
+}
+
+function getLatestNewsItems() {
+  const releasedGames = [...games]
+    .filter((game) => gameAddedDate(game) > 0)
+    .sort((first, second) => gameAddedDate(second) - gameAddedDate(first));
+
+  if (releasedGames.length) return releasedGames;
+
+  return [...roadmapItems]
+    .filter((item) => item.status === 'released')
+    .sort((first, second) => Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0));
+}
+
 function renderHomeNews() {
   const container = document.querySelector('#home-news-preview');
   if (!container) return;
-  const candidate = [...roadmapItems].sort((first, second) => Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0))
-    .find((item) => !['released', 'archived'].includes(item.status)) || null;
+  const candidate = getLatestNewsItems()[0] || null;
 
   if (!candidate) {
-    container.innerHTML = '<p class="empty-mini-state">No platform updates have been published yet.</p>';
+    container.innerHTML = '<p class="empty-mini-state">No released content has been published yet.</p>';
     return;
   }
 
+  const title = candidate.title || candidate.name || 'New release';
+  const description = candidate.description || 'New released content is now available.';
+  const category = candidate.category || 'Released';
+  const timestamp = candidate.updatedAt || candidate.addedAt || Date.now();
+
   container.innerHTML = `
     <div class="news-mini-card">
-      <p class="news-kicker">${escapeHtml(candidate.category || 'Platform')}</p>
-      <h3>${escapeHtml(candidate.title)}</h3>
-      <p class="news-summary">${escapeHtml(candidate.description || 'Platform update')}</p>
-      <time>${escapeHtml(new Date(candidate.updatedAt || Date.now()).toLocaleDateString())}</time>
+      <p class="news-kicker">${escapeHtml(category)}</p>
+      <h3>${escapeHtml(title)}</h3>
+      <p class="news-summary">${escapeHtml(description)}</p>
+      <time>${escapeHtml(new Date(timestamp).toLocaleDateString())}</time>
       <button class="mini-link" type="button" data-route="/news">View All</button>
     </div>`;
 }
@@ -213,12 +235,10 @@ function renderHomeNews() {
 function renderHomeComingSoon() {
   const container = document.querySelector('#home-coming-preview');
   if (!container) return;
-  const candidate = [...roadmapItems]
-    .filter((item) => !['released', 'archived'].includes(item.status))
-    .sort((first, second) => {
-      const priority = { 'in-progress': 0, testing: 1, planned: 2, idea: 3, 'on-hold': 4 };
-      return (priority[first.status] ?? 99) - (priority[second.status] ?? 99) || Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0);
-    })[0] || null;
+  const candidate = getUpcomingRoadmapItems().sort((first, second) => {
+    const priority = { 'in-progress': 0, testing: 1, planned: 2, idea: 3, 'on-hold': 4 };
+    return (priority[first.status] ?? 99) - (priority[second.status] ?? 99) || Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0);
+  })[0] || null;
 
   if (!candidate) {
     container.innerHTML = '<p class="empty-mini-state">New updates are being planned.</p>';
@@ -246,20 +266,25 @@ function renderHomeRoutes() {
 function renderNewsPage() {
   const content = document.querySelector('#news-page-content');
   if (!content) return;
-  const latest = [...roadmapItems].sort((first, second) => Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0)).find((item) => !['released', 'archived'].includes(item.status));
-  if (!latest) {
-    content.innerHTML = '<p class="empty-mini-state">No platform updates have been published yet.</p>';
+  const latest = getLatestNewsItems();
+  if (!latest.length) {
+    content.innerHTML = '<p class="empty-mini-state">No released content has been published yet.</p>';
     return;
   }
 
-  content.innerHTML = `
-    <article class="news-story">
-      <p class="news-kicker">${escapeHtml(latest.category || 'Platform')}</p>
-      <h2>${escapeHtml(latest.title)}</h2>
-      <p class="news-meta"><time>${escapeHtml(new Date(latest.updatedAt || Date.now()).toLocaleDateString())}</time></p>
-      <p>${escapeHtml(latest.description || 'Platform update')}</p>
-      <a class="button button-secondary" href="/coming-soon" data-route="/coming-soon">View Roadmap</a>
-    </article>`;
+  content.innerHTML = latest.slice(0, 6).map((entry) => {
+    const title = entry.title || entry.name || 'New release';
+    const description = entry.description || 'Newly released content is now available.';
+    const category = entry.category || 'Release';
+    const timestamp = entry.updatedAt || entry.addedAt || Date.now();
+    return `
+      <article class="news-story">
+        <p class="news-kicker">${escapeHtml(category)}</p>
+        <h2>${escapeHtml(title)}</h2>
+        <p class="news-meta"><time>${escapeHtml(new Date(timestamp).toLocaleDateString())}</time></p>
+        <p>${escapeHtml(description)}</p>
+      </article>`;
+  }).join('') + '<div class="news-page-actions"><a class="button button-secondary" href="/games" data-route="/games">Browse all games</a></div>';
 }
 
 function renderTrendingPage() {
@@ -398,8 +423,7 @@ function roadmapPreviewRow(item) {
 }
 
 function renderRoadmapViews() {
-  const activeItems = roadmapItems.filter((item) => !['released', 'archived'].includes(item.status))
-    .sort((first, second) => Date.parse(second.updatedAt || '') - Date.parse(first.updatedAt || ''));
+  const activeItems = getUpcomingRoadmapItems();
   const comingItems = activeItems.filter((item) => item.category !== 'content');
   if (comingGrid) comingGrid.innerHTML = comingItems.length ? comingItems.map(roadmapCard).join('') : '<p class="view-empty">No upcoming items right now.</p>';
   renderHomeNews();
