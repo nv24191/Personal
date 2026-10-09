@@ -25,6 +25,7 @@ let activeGallery;
 let galleryIndex = 0;
 const gamesPerPage = 15;
 let currentPage = 1;
+const gamesWithoutGalleryButton = new Set(['ragdoll-hit', 'red-ball-4', 'subway-surfers-new-york', 'miragine-war']);
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -87,7 +88,7 @@ function categories() {
 function gameCard(game, index, localPlayCount = null) {
   const tags = [game.category, ...(game.tags || [])].filter((tag, position, list) => list.indexOf(tag) === position).slice(0, 2);
   const hasThumbnail = Boolean(game.thumbnail);
-  const hasGallery = Array.isArray(game.screenshots) && game.screenshots.length > 0;
+  const hasGallery = Array.isArray(game.screenshots) && game.screenshots.length > 0 && !gamesWithoutGalleryButton.has(game.id);
   return `
     <article class="game-card" style="animation-delay:${Math.min(index * 45, 225)}ms" data-game-id="${escapeHtml(game.id)}">
       <a class="game-art" data-category="${escapeHtml(game.category)}" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}" aria-label="Play ${escapeHtml(game.title)}">
@@ -368,7 +369,7 @@ function renderTrending() {
 function renderRecentlyAdded() {
   const recentGames = games.filter((game) => gameAddedDate(game) > 0)
     .sort((first, second) => gameAddedDate(second) - gameAddedDate(first))
-    .slice(0, 6);
+    .slice(0, 3);
   if (!recentlyAddedList) return;
   recentlyAddedList.innerHTML = recentGames.length ? recentGames.map((game) => `
     <a class="recent-item" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}">
@@ -397,20 +398,11 @@ function roadmapPreviewRow(item) {
 function renderRoadmapViews() {
   const activeItems = roadmapItems.filter((item) => !['released', 'archived'].includes(item.status))
     .sort((first, second) => Date.parse(second.updatedAt || '') - Date.parse(first.updatedAt || ''));
-  const newsItems = activeItems.filter((item) => item.category === 'content');
   const comingItems = activeItems.filter((item) => item.category !== 'content');
-  if (newsGrid) newsGrid.innerHTML = newsItems.length ? newsItems.map(roadmapCard).join('') : '<p class="view-empty">No news right now.</p>';
   if (comingGrid) comingGrid.innerHTML = comingItems.length ? comingItems.map(roadmapCard).join('') : '<p class="view-empty">No upcoming items right now.</p>';
-  const latestUpdate = newsItems[0];
-  document.querySelector('#home-update-module').hidden = !latestUpdate;
-  document.querySelector('#home-update-preview').innerHTML = latestUpdate ? roadmapPreviewRow(latestUpdate) : '';
-  const updateLink = document.querySelector('#home-update-link');
-  const updateView = 'news';
-  updateLink.href = `/?view=${updateView}`;
-  updateLink.dataset.hubView = updateView;
-  updateLink.textContent = updateView === 'news' ? 'View news' : 'View roadmap';
-  document.querySelector('#home-roadmap-module').hidden = comingItems.length === 0;
-  document.querySelector('#home-roadmap-preview').innerHTML = comingItems.slice(0, 2).map(roadmapPreviewRow).join('');
+  renderHomeNews();
+  renderHomeComingSoon();
+  renderNewsPage();
 }
 
 function setDrawerOpen(open) {
@@ -627,18 +619,21 @@ function bindEvents() {
 
   const updateSearch = (event) => {
     searchInput.value = event.currentTarget.value;
-    homeSearchInput.value = searchInput.value;
+    if (homeSearchInput) homeSearchInput.value = searchInput.value;
     currentPage = 1;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(renderGames, reducedMotion ? 0 : 70);
   };
   searchInput.addEventListener('input', updateSearch);
-  homeSearchInput.addEventListener('input', updateSearch);
-  document.querySelector('#home-search-form').addEventListener('submit', (event) => {
+  homeSearchInput?.addEventListener('input', updateSearch);
+  document.querySelector('#home-search-form')?.addEventListener('submit', (event) => {
     event.preventDefault();
     searchInput.value = homeSearchInput.value;
+    currentPage = 1;
     renderGames();
-    setHubView('games', { pushState: true, focusSearch: true });
+    window.history.pushState({}, '', '/games');
+    applyRoute('/games');
+    searchInput.focus({ preventScroll: true });
   });
   document.querySelector('#game-sort').addEventListener('change', () => {
     currentPage = 1;
@@ -690,7 +685,7 @@ function bindEvents() {
 
   document.querySelector('#search-clear').addEventListener('click', () => {
     searchInput.value = '';
-    homeSearchInput.value = '';
+    if (homeSearchInput) homeSearchInput.value = '';
     searchInput.focus();
     currentPage = 1;
     renderGames();
@@ -710,7 +705,7 @@ function bindEvents() {
   document.querySelector('#clear-filters').addEventListener('click', () => {
     activeCategory = 'All';
     searchInput.value = '';
-    homeSearchInput.value = '';
+    if (homeSearchInput) homeSearchInput.value = '';
     currentPage = 1;
     categories();
     renderGames();
@@ -721,7 +716,11 @@ function bindEvents() {
     activeRoadmapCategory = link.dataset.roadmapCategory;
     renderComingSoon();
   }));
-  document.querySelector('[data-hub-action="search"]').addEventListener('click', () => setHubView('games', { focusSearch: true, focusHeading: false, pushState: true }));
+  document.querySelector('[data-hub-action="search"]')?.addEventListener('click', () => {
+    window.history.pushState({}, '', '/games');
+    applyRoute('/games');
+    searchInput.focus({ preventScroll: true });
+  });
 
   document.querySelector('#feature-previous').addEventListener('click', () => showSlide(-1));
   document.querySelector('#feature-next').addEventListener('click', () => showSlide(1));
@@ -806,7 +805,7 @@ function bindEvents() {
     if (event.key === 'Escape') {
       if (document.activeElement === searchInput && searchInput.value) {
         searchInput.value = '';
-        homeSearchInput.value = '';
+        if (homeSearchInput) homeSearchInput.value = '';
         renderGames();
       }
     }
