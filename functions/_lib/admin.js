@@ -117,7 +117,7 @@ async function loadState(request, env) {
     let catalogDatesUpdated = false;
     state.games = state.games.map((game) => {
       const addedAt = addedAtById.get(game.id);
-      if (game.addedAt || !addedAt) return game;
+      if (Number.isFinite(Date.parse(game.addedAt || '')) || !addedAt) return game;
       catalogDatesUpdated = true;
       return { ...game, addedAt };
     });

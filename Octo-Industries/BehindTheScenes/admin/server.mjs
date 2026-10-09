@@ -76,6 +76,21 @@ function publicGame(game) {
   return publicFields;
 }
 
+function restoreCatalogAddedDates(state, catalog) {
+  const catalogDates = new Map(catalog
+    .filter((game) => Number.isFinite(Date.parse(game.addedAt || '')))
+    .map((game) => [game.id, game.addedAt]));
+  let changed = false;
+  state.games = state.games.map((game) => {
+    if (Number.isFinite(Date.parse(game.addedAt || ''))) return game;
+    const addedAt = catalogDates.get(game.id);
+    if (!addedAt) return game;
+    changed = true;
+    return { ...game, addedAt };
+  });
+  return changed;
+}
+
 async function saveState() {
   if (remoteD1Configured) {
     const result = await d1Query(
@@ -235,6 +250,7 @@ async function loadState() {
         state.feedback = [];
         changed = true;
       }
+      if (restoreCatalogAddedDates(state, catalog)) changed = true;
       if (ensureRoadmapState(state)) changed = true;
       const existingIds = new Set(state.games.map((game) => game.id));
       for (const game of catalog) {
@@ -269,9 +285,12 @@ async function loadState() {
     if (!Array.isArray(state.games) || !Array.isArray(state.jobs) || !Array.isArray(state.activity)) {
       throw new Error('The saved admin state has an invalid format.');
     }
+    restoreCatalogAddedDates(state, catalog);
     const existingIds = new Set(state.games.map((game) => game.id));
     for (const game of catalog) {
-      if (!existingIds.has(game.id)) state.games.push({ ...game, status: 'published' });
+      if (!existingIds.has(game.id)) {
+        state.games.push({ ...game, status: 'published' });
+      }
     }
     for (const job of state.jobs) {
       if (job.status === 'running' || job.status === 'queued') {

@@ -4,8 +4,22 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const gameCollection = resolve(root, 'Octo-Industries');
+const output = resolve(root, 'Octo-Industries', 'BehindTheScenes', 'hub', 'catalog.js');
 const excludedDirectories = new Set(['.cloudflare-dist', '.git', '.octo-data', '.vscode', 'node_modules', 'dist']);
 const gamesToRegister = [];
+
+let previousCatalog = [];
+if (existsSync(output)) {
+  const source = readFileSync(output, 'utf8');
+  const match = /Object\.freeze\(([\s\S]*)\);\s*$/.exec(source);
+  if (!match) throw new Error('The generated game catalog has an invalid format.');
+  previousCatalog = JSON.parse(match[1]);
+  if (!Array.isArray(previousCatalog)) throw new Error('The generated game catalog must be an array.');
+}
+const previousAddedAt = new Map(previousCatalog
+  .filter((game) => Number.isFinite(Date.parse(game.addedAt || '')))
+  .map((game) => [game.id, game.addedAt]));
+const syncDate = new Date().toISOString();
 
 function walk(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -176,6 +190,9 @@ const games = gamesToRegister.map(({ gameDirectory, manifest }) => {
 
   return {
     ...metadata,
+    addedAt: Number.isFinite(Date.parse(game.addedAt || ''))
+      ? game.addedAt
+      : previousAddedAt.get(game.id) || syncDate,
     launch,
     thumbnail: bannerPath
       ? relative(root, bannerPath).split(sep).map(encodeURIComponent).join('/')
@@ -193,7 +210,6 @@ for (const game of games) {
   gameIds.add(game.id);
 }
 
-const output = resolve(root, 'Octo-Industries', 'BehindTheScenes', 'hub', 'catalog.js');
 await import('node:fs/promises').then(({ mkdir }) => mkdir(dirname(output), { recursive: true }));
 writeFileSync(output, `window.OCTO_GAMES = Object.freeze(${JSON.stringify(games, null, 2)});\n`);
 console.log(`Discovered ${games.length} games. Catalog written to ${relative(root, output)}.`);

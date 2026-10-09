@@ -283,8 +283,8 @@ function renderTrendingPage() {
 function renderRecentlyAddedPage() {
   const list = document.querySelector('#recently-added-page-grid');
   if (!list) return;
-  const items = games.filter((game) => Number.isFinite(Date.parse(game.addedAt)))
-    .sort((first, second) => Date.parse(second.addedAt) - Date.parse(first.addedAt))
+  const items = games.filter((game) => gameAddedDate(game) > 0)
+    .sort((first, second) => gameAddedDate(second) - gameAddedDate(first))
     .slice(0, 8);
   list.innerHTML = items.length ? items.map((game) => `
     <article class="game-card">
@@ -295,7 +295,7 @@ function renderRecentlyAddedPage() {
       </a>
       <div class="game-card-copy">
         <div><div class="game-heading-line"><h3>${escapeHtml(game.title)}</h3><span class="category-label">${escapeHtml(game.category.toUpperCase())}</span></div><p class="game-description">${escapeHtml(game.description)}</p></div>
-        <div class="game-card-foot"><div class="game-tags"><span class="game-tag">Added ${escapeHtml(new Date(game.addedAt).toLocaleDateString())}</span></div><a class="play-link" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}"><span aria-hidden="true">▶</span> PLAY</a></div>
+        <div class="game-card-foot"><div class="game-tags"><span class="game-tag">Added ${escapeHtml(new Date(gameAddedDate(game)).toLocaleDateString())}</span></div><a class="play-link" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}"><span aria-hidden="true">▶</span> PLAY</a></div>
       </div>
     </article>`).join('') : '<p class="empty-mini-state">No recently added games are available yet.</p>';
 }
@@ -341,9 +341,11 @@ function gamePreviewRow(game, detail) {
 }
 
 function gameAddedDate(game) {
-  const value = game.addedAt || game.publishedAt || game.createdAt;
-  const timestamp = Date.parse(value || '');
-  return Number.isFinite(timestamp) ? timestamp : 0;
+  for (const value of [game.addedAt, game.publishedAt, game.createdAt]) {
+    const timestamp = Date.parse(value || '');
+    if (Number.isFinite(timestamp)) return timestamp;
+  }
+  return 0;
 }
 
 function renderTrending() {

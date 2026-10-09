@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -71,6 +71,16 @@ test('admin service protects and manages the canonical library', async (t) => {
   const port = await freePort();
   const baseUrl = `http://127.0.0.1:${port}`;
   const dataDirectory = await mkdtemp(resolve(tmpdir(), 'octo-admin-test-'));
+  const catalogSource = await readFile(resolve(project, 'hub/catalog.js'), 'utf8');
+  const catalogMatch = /Object\.freeze\(([\s\S]*)\);\s*$/.exec(catalogSource);
+  assert.ok(catalogMatch);
+  const storedCatalog = JSON.parse(catalogMatch[1]);
+  await mkdir(dataDirectory, { recursive: true });
+  await writeFile(resolve(dataDirectory, 'admin-state.json'), JSON.stringify({
+    games: storedCatalog.map(({ addedAt, ...game }) => ({ ...game, status: 'published' })),
+    jobs: [],
+    activity: [],
+  }));
   const password = `Test-${randomBytes(12).toString('hex')}`;
   const salt = randomBytes(16).toString('hex');
   const digest = pbkdf2Sync(password, salt, 120000, 64, 'sha512').toString('hex');
@@ -162,6 +172,7 @@ test('admin service protects and manages the canonical library', async (t) => {
   assert.equal(roadmapDelete.status, 200);
 
   const initialCatalog = await (await fetch(`${baseUrl}/api/catalog`)).json();
+  assert.ok(initialCatalog.every((game) => Number.isFinite(Date.parse(game.addedAt))));
   const feedbackResponse = await fetch(`${baseUrl}/api/feedback`, {
     method: 'POST',
     headers: { Origin: baseUrl, 'Content-Type': 'application/json' },
