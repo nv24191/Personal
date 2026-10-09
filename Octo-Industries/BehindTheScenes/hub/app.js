@@ -1,3 +1,5 @@
+import { getRouteTitle, normalizeHubRoute } from './route-utils.js';
+
 let games = Array.isArray(window.OCTO_GAMES) ? [...window.OCTO_GAMES] : [];
 let byId = new Map(games.map((game) => [game.id, game]));
 const grid = document.querySelector('#game-grid');
@@ -7,12 +9,9 @@ const categoryList = document.querySelector('#category-list');
 const topCategoryList = document.querySelector('#top-category-list');
 const resultSummary = document.querySelector('#results-summary');
 const emptyState = document.querySelector('#empty-state');
-const recentList = document.querySelector('#recent-list');
-const recentlyAddedList = document.querySelector('#recently-added-list');
-const trendingGrid = document.querySelector('#trending-grid');
-const homeTrendingPreview = document.querySelector('#home-trending-preview');
-const homeAddedPreview = document.querySelector('#home-added-preview');
-const homeLibraryGrid = document.querySelector('#home-library-grid');
+const continueList = document.querySelector('#continue-list');
+const recentlyAddedList = document.querySelector('#dashboard-recently-added-list');
+const trendingList = document.querySelector('#trending-list');
 const comingGrid = document.querySelector('#coming-grid');
 const newsGrid = document.querySelector('#news-grid');
 let roadmapItems = [];
@@ -66,19 +65,23 @@ function imageMarkup(game, className, contain = false) {
   return `<img class="${className}" data-game-id="${escapeHtml(game.id)}" src="${escapeHtml(game.thumbnail)}" alt="" loading="${className === 'featured-image' ? 'eager' : 'lazy'}"${contain ? ' data-contain="true"' : ''}>`;
 }
 
+function updateFilterButtonLabel() {
+  const filterButton = document.querySelector('#filter-games');
+  if (!filterButton) return;
+  const count = activeCategory === 'All' ? 0 : 1;
+  const label = filterButton.querySelector('.filter-button-text');
+  if (label) {
+    label.textContent = count ? `Filter by (${count})` : 'Filter by';
+  }
+  filterButton.setAttribute('aria-label', count ? `Filter games, ${count} active` : 'Filter games');
+}
+
 function categories() {
-  const counts = new Map();
-  for (const game of games) counts.set(game.category, (counts.get(game.category) || 0) + 1);
-  const options = [['All', games.length], ...[...counts.entries()].sort(([first], [second]) => first.localeCompare(second))];
-  const markup = options.map(([name, count]) => `
-    <button class="category-chip${activeCategory === name ? ' is-active' : ''}" type="button" data-category="${escapeHtml(name)}" aria-pressed="${activeCategory === name}">
-      ${escapeHtml(name === 'All' ? 'All games' : name)} <span>${String(count).padStart(2, '0')}</span>
-    </button>`).join('');
-  if (categoryList) categoryList.innerHTML = markup;
-  if (topCategoryList) topCategoryList.innerHTML = options.map(([name, count]) => `
-    <button class="top-category-pill${activeCategory === name ? ' is-active' : ''}" type="button" data-category="${escapeHtml(name)}" aria-pressed="${activeCategory === name}">
-      ${escapeHtml(name === 'All' ? 'All' : name)} <span>${String(count).padStart(2, '0')}</span>
-    </button>`).join('');
+  if (categoryList) {
+    categoryList.innerHTML = '';
+    categoryList.hidden = true;
+  }
+  updateFilterButtonLabel();
 }
 
 function gameCard(game, index, localPlayCount = null) {
@@ -164,25 +167,155 @@ function renderGames() {
     ? `${games.length} games, all ready to play`
     : `${matches.length} ${matches.length === 1 ? 'game' : 'games'} found`;
   document.querySelector('#search-clear').hidden = !searchInput.value;
+  updateFilterButtonLabel();
+}
 
-  const showPagination = matches.length > gamesPerPage;
-  pagination.hidden = !showPagination;
-  if (pageStatus) {
-    pageStatus.textContent = showPagination ? `Page ${currentPage} of ${totalPages}` : 'Page 1 of 1';
+function renderDashboardOverview() {
+  const currentGames = Array.isArray(games) ? games : [];
+  const recent = readRecent().map((id) => byId.get(id)).filter(Boolean);
+  const featuredEntries = currentGames.filter((game) => game.featured).slice(0, 4);
+  const trendingEntries = featuredEntries.length ? featuredEntries : currentGames.slice(0, 4);
+  const overviewTotal = document.querySelector('#overview-total');
+  const overviewCategories = document.querySelector('#overview-categories');
+  const overviewTrending = document.querySelector('#overview-trending');
+  const overviewContinue = document.querySelector('#overview-continue');
+  const welcomeCopy = document.querySelector('#welcome-copy');
+
+  if (overviewTotal) overviewTotal.textContent = String(currentGames.length || 0);
+  if (overviewCategories) overviewCategories.textContent = String(new Set(currentGames.map((game) => game.category)).size || 0);
+  if (overviewTrending) overviewTrending.textContent = String(trendingEntries.length || 0);
+  if (overviewContinue) overviewContinue.textContent = String(recent.length || 0);
+  if (welcomeCopy) welcomeCopy.textContent = `${String(currentGames.length || 0)} Games Ready to Play`;
+}
+
+function renderHomeNews() {
+  const container = document.querySelector('#home-news-preview');
+  if (!container) return;
+  const candidate = [...roadmapItems].sort((first, second) => Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0))
+    .find((item) => !['released', 'archived'].includes(item.status)) || null;
+
+  if (!candidate) {
+    container.innerHTML = '<p class="empty-mini-state">No platform updates have been published yet.</p>';
+    return;
   }
-  if (previousButton) previousButton.disabled = currentPage <= 1;
-  if (nextButton) nextButton.disabled = currentPage >= totalPages;
+
+  container.innerHTML = `
+    <div class="news-mini-card">
+      <p class="news-kicker">${escapeHtml(candidate.category || 'Platform')}</p>
+      <h3>${escapeHtml(candidate.title)}</h3>
+      <p class="news-summary">${escapeHtml(candidate.description || 'Platform update')}</p>
+      <time>${escapeHtml(new Date(candidate.updatedAt || Date.now()).toLocaleDateString())}</time>
+      <button class="mini-link" type="button" data-route="/news">View All</button>
+    </div>`;
+}
+
+function renderHomeComingSoon() {
+  const container = document.querySelector('#home-coming-preview');
+  if (!container) return;
+  const candidate = [...roadmapItems]
+    .filter((item) => !['released', 'archived'].includes(item.status))
+    .sort((first, second) => {
+      const priority = { 'in-progress': 0, testing: 1, planned: 2, idea: 3, 'on-hold': 4 };
+      return (priority[first.status] ?? 99) - (priority[second.status] ?? 99) || Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0);
+    })[0] || null;
+
+  if (!candidate) {
+    container.innerHTML = '<p class="empty-mini-state">New updates are being planned.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="news-mini-card">
+      <p class="news-kicker">${escapeHtml((candidate.status || 'Planned').replace(/-/g, ' '))}</p>
+      <h3>${escapeHtml(candidate.title)}</h3>
+      <p class="news-summary">${escapeHtml(candidate.description || 'Platform update')}</p>
+      <time>${escapeHtml(new Date(candidate.updatedAt || Date.now()).toLocaleDateString())}</time>
+      <button class="mini-link" type="button" data-route="/coming-soon">View Roadmap</button>
+    </div>`;
+}
+
+function renderHomeRoutes() {
+  renderHomeNews();
+  renderHomeComingSoon();
+  renderTrendingPage();
+  renderRecentlyAddedPage();
+  renderNewsPage();
+}
+
+function renderNewsPage() {
+  const content = document.querySelector('#news-page-content');
+  if (!content) return;
+  const latest = [...roadmapItems].sort((first, second) => Date.parse(second.updatedAt || 0) - Date.parse(first.updatedAt || 0)).find((item) => !['released', 'archived'].includes(item.status));
+  if (!latest) {
+    content.innerHTML = '<p class="empty-mini-state">No platform updates have been published yet.</p>';
+    return;
+  }
+
+  content.innerHTML = `
+    <article class="news-story">
+      <p class="news-kicker">${escapeHtml(latest.category || 'Platform')}</p>
+      <h2>${escapeHtml(latest.title)}</h2>
+      <p class="news-meta"><time>${escapeHtml(new Date(latest.updatedAt || Date.now()).toLocaleDateString())}</time></p>
+      <p>${escapeHtml(latest.description || 'Platform update')}</p>
+      <a class="button button-secondary" href="/coming-soon" data-route="/coming-soon">View Roadmap</a>
+    </article>`;
+}
+
+function renderTrendingPage() {
+  const list = document.querySelector('#trending-page-grid');
+  if (!list) return;
+  const items = games.slice(0, 6);
+  list.innerHTML = items.length ? items.map((game) => `
+    <article class="game-card">
+      <a class="game-art" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}" aria-label="Play ${escapeHtml(game.title)}">
+        ${game.thumbnail ? imageMarkup(game, 'game-image') : `<span class="art-index">${escapeHtml(game.title.slice(0, 1).toUpperCase())}</span>`}
+        <span class="art-live"><i></i> POPULAR</span>
+        <span class="art-category">${escapeHtml(game.category.toUpperCase())}</span>
+      </a>
+      <div class="game-card-copy">
+        <div><div class="game-heading-line"><h3>${escapeHtml(game.title)}</h3><span class="category-label">${escapeHtml(game.category.toUpperCase())}</span></div><p class="game-description">${escapeHtml(game.description)}</p></div>
+        <div class="game-card-foot"><div class="game-tags"></div><a class="play-link" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}"><span aria-hidden="true">▶</span> PLAY</a></div>
+      </div>
+    </article>`).join('') : '<p class="empty-mini-state">No trending data is available right now.</p>';
+}
+
+function renderRecentlyAddedPage() {
+  const list = document.querySelector('#recently-added-page-grid');
+  if (!list) return;
+  const items = games.filter((game) => Number.isFinite(Date.parse(game.addedAt)))
+    .sort((first, second) => Date.parse(second.addedAt) - Date.parse(first.addedAt))
+    .slice(0, 8);
+  list.innerHTML = items.length ? items.map((game) => `
+    <article class="game-card">
+      <a class="game-art" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}" aria-label="Play ${escapeHtml(game.title)}">
+        ${game.thumbnail ? imageMarkup(game, 'game-image') : `<span class="art-index">${escapeHtml(game.title.slice(0, 1).toUpperCase())}</span>`}
+        <span class="art-live"><i></i> NEW</span>
+        <span class="art-category">${escapeHtml(game.category.toUpperCase())}</span>
+      </a>
+      <div class="game-card-copy">
+        <div><div class="game-heading-line"><h3>${escapeHtml(game.title)}</h3><span class="category-label">${escapeHtml(game.category.toUpperCase())}</span></div><p class="game-description">${escapeHtml(game.description)}</p></div>
+        <div class="game-card-foot"><div class="game-tags"><span class="game-tag">Added ${escapeHtml(new Date(game.addedAt).toLocaleDateString())}</span></div><a class="play-link" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}"><span aria-hidden="true">▶</span> PLAY</a></div>
+      </div>
+    </article>`).join('') : '<p class="empty-mini-state">No recently added games are available yet.</p>';
 }
 
 function renderRecent() {
-  const recent = readRecent().map((id) => byId.get(id)).filter(Boolean);
-  document.querySelector('#recent-empty').hidden = recent.length > 0;
-  recentList.innerHTML = recent.map((game) => `
-    <a class="recent-item" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}">
-      <span class="recent-thumb">${game.thumbnail ? imageMarkup(game, 'recent-image') : escapeHtml(game.title.slice(0, 1))}</span>
-      <span class="recent-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(game.category)} · Quick Resume</span></span>
-      <span class="recent-go" aria-hidden="true">RESUME</span>
-    </a>`).join('');
+  const recent = readRecent().map((id) => byId.get(id)).filter(Boolean).slice(0, 3);
+
+  if (!continueList) return;
+  if (!recent.length) {
+    continueList.innerHTML = `
+      <p class="empty-mini-state">No recently played games yet.</p>
+      <button class="mini-action" type="button" data-view="games">Browse Games</button>`;
+  } else {
+    continueList.innerHTML = recent.map((game) => `
+      <a class="mini-game-item" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}">
+        <span class="mini-thumb">${game.thumbnail ? imageMarkup(game, 'recent-image') : escapeHtml(game.title.slice(0, 1))}</span>
+        <span class="mini-copy"><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(game.category)}</small></span>
+        <span class="mini-go" aria-hidden="true">↗</span>
+      </a>`).join('');
+  }
+
 }
 
 function renderHomeOverview() {
@@ -213,43 +346,36 @@ function gameAddedDate(game) {
 }
 
 function renderTrending() {
-  if (!trendingGrid) return;
-  const playCounts = readPlayCounts();
-  const rankedGames = [...games].sort((first, second) =>
-    (Number(playCounts[second.id]) || 0) - (Number(playCounts[first.id]) || 0)
-    || Number(second.featured) - Number(first.featured)
-    || first.title.localeCompare(second.title));
-  trendingGrid.innerHTML = rankedGames.length
-    ? rankedGames.slice(0, 24).map((game, index) => gameCard(game, index, Number(playCounts[game.id]) || 0)).join('')
-    : '<p class="view-empty">No games are available right now.</p>';
-  if (homeTrendingPreview) {
-    homeTrendingPreview.innerHTML = rankedGames.slice(0, 4)
-      .map((game) => gamePreviewRow(game, `${Number(playCounts[game.id]) || 0} local plays · ${game.category}`)).join('');
-  }
-}
+  const picks = games.filter((game) => game.featured).slice(0, 4);
+  const list = picks.length ? picks : games.slice(0, 4);
 
-function renderHomeLibrary() {
-  if (!homeLibraryGrid) return;
-  const picks = [...games].sort((first, second) => Number(second.featured) - Number(first.featured) || first.title.localeCompare(second.title));
-  homeLibraryGrid.innerHTML = picks.slice(0, 10).map((game, index) => gameCard(game, index)).join('');
+  if (trendingList) {
+    trendingList.innerHTML = list.length
+      ? list.map((game) => `
+          <div class="trending-item">
+            <span class="trending-thumb">${game.thumbnail ? imageMarkup(game, 'mini-trending-image') : escapeHtml(game.title.slice(0, 1))}</span>
+            <div class="trending-copy">
+              <strong>${escapeHtml(game.title)}</strong>
+              <small>${escapeHtml(game.category)}</small>
+            </div>
+            <a class="trending-play" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}">Play</a>
+          </div>
+        `).join('')
+      : '<p class="empty-mini-state">No trending games right now.</p>';
+  }
 }
 
 function renderRecentlyAdded() {
   const recentGames = games.filter((game) => gameAddedDate(game) > 0)
     .sort((first, second) => gameAddedDate(second) - gameAddedDate(first))
     .slice(0, 6);
-  document.querySelector('#recently-added-empty').hidden = recentGames.length > 0;
-  recentlyAddedList.innerHTML = recentGames.map((game) => `
+  if (!recentlyAddedList) return;
+  recentlyAddedList.innerHTML = recentGames.length ? recentGames.map((game) => `
     <a class="recent-item" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}">
       <span class="recent-thumb">${game.thumbnail ? imageMarkup(game, 'recent-image') : escapeHtml(game.title.slice(0, 1))}</span>
       <span class="recent-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(game.category)} · Added ${escapeHtml(new Date(gameAddedDate(game)).toLocaleDateString())}</span></span>
       <span class="recent-go" aria-hidden="true">↗</span>
-    </a>`).join('');
-  if (homeAddedPreview) {
-    homeAddedPreview.innerHTML = recentGames
-      .map((game) => gamePreviewRow(game, `${game.category} · Added ${new Date(gameAddedDate(game)).toLocaleDateString()}`)).join('');
-    document.querySelector('#home-added-empty').hidden = recentGames.length > 0;
-  }
+    </a>`).join('') : '<p class="empty-mini-state">No recent additions yet.</p>';
 }
 
 const roadmapStatusLabels = {
@@ -368,6 +494,101 @@ function showSlide(offset) {
   renderFeatured();
 }
 
+function closeNavigation(restoreFocus = false) {
+  const menuToggle = document.querySelector('#menu-toggle');
+  document.querySelector('#primary-nav').classList.remove('is-open');
+  menuToggle.setAttribute('aria-expanded', 'false');
+  menuToggle.setAttribute('aria-label', 'Open navigation menu');
+  document.body.classList.remove('nav-open');
+  document.querySelector('#nav-backdrop').hidden = true;
+  if (restoreFocus) menuToggle.focus({ preventScroll: true });
+}
+
+function applyRoute(pathname = window.location.pathname) {
+  const safePath = normalizeHubRoute(pathname);
+  const routeMap = {
+    '/': ['/', '/games'],
+    '/games': ['/games'],
+    '/trending': ['/trending'],
+    '/recently-added': ['/recently-added'],
+    '/news': ['/news'],
+    '/coming-soon': ['/coming-soon'],
+    '/about': ['/about'],
+    '/contact': ['/contact'],
+    '/inquiries': ['/inquiries'],
+    '/admin': ['/admin'],
+  };
+
+  const activePages = routeMap[safePath] || ['/'];
+  document.querySelectorAll('[data-page]').forEach((section) => {
+    const page = section.dataset.page || '/';
+    section.hidden = !activePages.includes(page);
+  });
+
+  document.querySelectorAll('.nav-link[data-route]').forEach((link) => {
+    const isActive = normalizeHubRoute(link.dataset.route || '/') === safePath;
+    link.classList.toggle('is-active', isActive);
+  });
+
+  const heading = document.querySelector('#home-page h1, #games-page h2, #trending-page h1, #recently-added-page h1, #news-page h1, #coming-soon-page h2, #about-page h1, #contact-page h1, #inquiries-page h1');
+  if (heading) heading.tabIndex = -1;
+  if (heading) {
+    heading.focus({ preventScroll: true });
+  }
+
+  document.title = getRouteTitle(safePath);
+
+  if (safePath !== '/games' && searchInput) {
+    searchInput.blur();
+  }
+}
+
+function bindNavigationControls() {
+  const menuToggle = document.querySelector('#menu-toggle');
+  const navigation = document.querySelector('#primary-nav');
+
+  menuToggle.addEventListener('click', () => {
+    const open = menuToggle.getAttribute('aria-expanded') !== 'true';
+    if (!open) {
+      closeNavigation(true);
+      return;
+    }
+    menuToggle.setAttribute('aria-expanded', 'true');
+    menuToggle.setAttribute('aria-label', 'Close navigation menu');
+    navigation.classList.add('is-open');
+    document.body.classList.add('nav-open');
+    document.querySelector('#nav-backdrop').hidden = false;
+    navigation.querySelector('.nav-link')?.focus({ preventScroll: true });
+  });
+
+  navigation.addEventListener('click', (event) => {
+    const routeLink = event.target.closest('[data-route]');
+    if (routeLink) {
+      const route = normalizeHubRoute(routeLink.getAttribute('href') || routeLink.dataset.route || '/');
+      if (route !== '/admin') {
+        event.preventDefault();
+        window.history.pushState({}, '', route);
+        applyRoute(route);
+      }
+      closeNavigation(true);
+    }
+  });
+
+  document.querySelector('#nav-backdrop').addEventListener('click', () => closeNavigation(true));
+  document.querySelectorAll('.nav-search').forEach((button) => button.addEventListener('click', () => {
+    const gamesSection = document.querySelector('#games-page');
+    gamesSection?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+    window.setTimeout(() => searchInput.focus({ preventScroll: true }), reducedMotion ? 0 : 350);
+    closeNavigation();
+  }));
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && menuToggle.getAttribute('aria-expanded') === 'true') {
+      closeNavigation(true);
+    }
+  });
+}
+
 function bindEvents() {
   document.addEventListener('error', (event) => {
     const image = event.target;
@@ -424,15 +645,47 @@ function bindEvents() {
     renderGames();
   });
 
-  document.querySelector('#games-previous').addEventListener('click', () => {
-    currentPage = Math.max(1, currentPage - 1);
-    renderGames();
+  document.querySelectorAll('.filter-option').forEach((button) => {
+    button.addEventListener('click', () => {
+      const panel = document.querySelector('#filter-panel');
+      activeCategory = button.dataset.category;
+      categories();
+      renderGames();
+      if (panel) panel.hidden = true;
+      const filterButton = document.querySelector('#filter-games');
+      if (filterButton) {
+        filterButton.setAttribute('aria-expanded', 'false');
+      }
+    });
   });
-  document.querySelector('#games-next').addEventListener('click', () => {
-    const matches = getMatches();
-    const totalPages = Math.max(1, Math.ceil(matches.length / gamesPerPage));
-    currentPage = Math.min(totalPages, currentPage + 1);
-    renderGames();
+
+  document.querySelector('#filter-games')?.addEventListener('click', () => {
+    const panel = document.querySelector('#filter-panel');
+    const filterButton = document.querySelector('#filter-games');
+    if (!panel || !filterButton) return;
+    const expanded = filterButton.getAttribute('aria-expanded') === 'true';
+    panel.hidden = expanded;
+    filterButton.setAttribute('aria-expanded', String(!expanded));
+    if (!expanded) {
+      panel.focus?.();
+    } else {
+      filterButton.focus({ preventScroll: true });
+    }
+  });
+
+  document.querySelectorAll('.mini-category').forEach((button) => {
+    button.addEventListener('click', () => {
+      activeCategory = button.dataset.category;
+      categories();
+      renderGames();
+      document.querySelector('#games-page')?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+      searchInput.focus({ preventScroll: true });
+    });
+  });
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(renderGames, reducedMotion ? 0 : 70);
   });
 
   document.querySelector('#search-clear').addEventListener('click', () => {
@@ -441,6 +694,17 @@ function bindEvents() {
     searchInput.focus();
     currentPage = 1;
     renderGames();
+  });
+
+  document.querySelector('#filter-clear-all')?.addEventListener('click', () => {
+    activeCategory = 'All';
+    categories();
+    renderGames();
+    const panel = document.querySelector('#filter-panel');
+    const filterButton = document.querySelector('#filter-games');
+    if (panel) panel.hidden = true;
+    if (filterButton) filterButton.setAttribute('aria-expanded', 'false');
+    filterButton?.focus({ preventScroll: true });
   });
 
   document.querySelector('#clear-filters').addEventListener('click', () => {
@@ -453,9 +717,9 @@ function bindEvents() {
     searchInput.focus();
   });
 
-  document.querySelectorAll('[data-hub-view]').forEach((button) => button.addEventListener('click', (event) => {
-    if (button.tagName === 'A') event.preventDefault();
-    setHubView(button.dataset.hubView, { pushState: true, focusHeading: true, focusTarget: button.dataset.focusTarget || '' });
+  document.querySelectorAll('[data-roadmap-category]').forEach((link) => link.addEventListener('click', () => {
+    activeRoadmapCategory = link.dataset.roadmapCategory;
+    renderComingSoon();
   }));
   document.querySelector('[data-hub-action="search"]').addEventListener('click', () => setHubView('games', { focusSearch: true, focusHeading: false, pushState: true }));
 
@@ -503,18 +767,28 @@ function bindEvents() {
       return;
     }
     const launch = event.target.closest('[data-launch-id]');
-    if (launch && byId.has(launch.dataset.launchId)) {
-      markPlayed(byId.get(launch.dataset.launchId));
-      renderTrending();
-    }
-    if (event.target.closest('#primary-nav a')) setDrawerOpen(false);
-  });
+    if (launch && byId.has(launch.dataset.launchId)) markPlayed(byId.get(launch.dataset.launchId));
 
-  const menuToggle = document.querySelector('#menu-toggle');
-  menuToggle.addEventListener('click', () => setDrawerOpen(menuToggle.getAttribute('aria-expanded') !== 'true'));
-  document.querySelector('#nav-backdrop').addEventListener('click', () => {
-    setDrawerOpen(false);
-    menuToggle.focus();
+    const routeLink = event.target.closest('[data-route]');
+    if (routeLink) {
+      const nextPath = normalizeHubRoute(routeLink.getAttribute('href') || routeLink.dataset.route || '/');
+      if (nextPath !== '/admin') {
+        event.preventDefault();
+        window.history.pushState({}, '', nextPath);
+        applyRoute(nextPath);
+      }
+      return;
+    }
+
+    const viewTarget = event.target.closest('[data-view]');
+    if (viewTarget) {
+      const targetId = viewTarget.dataset.view;
+      const viewSection = document.querySelector(`#${targetId}`);
+      if (viewSection) {
+        viewSection.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+      }
+    }
+
   });
 
   document.addEventListener('keydown', (event) => {
@@ -526,14 +800,11 @@ function bindEvents() {
     }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      setHubView('games', { focusSearch: true, pushState: true });
+      document.querySelector('#games-page')?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+      searchInput.focus({ preventScroll: true });
     }
     if (event.key === 'Escape') {
-      const drawerWasOpen = document.querySelector('#menu-toggle').getAttribute('aria-expanded') === 'true';
-      setDrawerOpen(false);
-      if (drawerWasOpen) document.querySelector('#menu-toggle').focus();
-      const focusedSearch = document.activeElement === searchInput || document.activeElement === homeSearchInput;
-      if (focusedSearch && (searchInput.value || homeSearchInput.value)) {
+      if (document.activeElement === searchInput && searchInput.value) {
         searchInput.value = '';
         homeSearchInput.value = '';
         renderGames();
@@ -544,6 +815,19 @@ function bindEvents() {
     setHubView(new URLSearchParams(window.location.search).get('view') || 'home');
   });
 
+  const navLinks = [...document.querySelectorAll('.primary-nav .nav-link[data-route]')];
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const route = entry.target.dataset.page || '/';
+        navLinks.forEach((link) => link.classList.toggle('is-active', normalizeHubRoute(link.dataset.route || '/') === route));
+      }
+    }, { rootMargin: '-25% 0px -65% 0px' });
+    document.querySelectorAll('[data-page]').forEach((section) => {
+      if (!section.hidden) observer.observe(section);
+    });
+  }
 }
 
 function browserDeviceInfo() {
@@ -589,10 +873,15 @@ function bindFeedbackForm() {
     game.append(option);
   }
   const open = () => {
-    setDrawerOpen(false);
+    closeNavigation();
     dialog.showModal();
   };
-  document.querySelectorAll('#feedback-open, [data-feedback-open]').forEach((button) => button.addEventListener('click', open));
+  document.querySelectorAll('#feedback-open, [data-feedback-open], #inquiries-open').forEach((button) => button.addEventListener('click', () => {
+    const route = normalizeHubRoute('/inquiries');
+    window.history.pushState({}, '', route);
+    applyRoute(route);
+    open();
+  }));
   document.querySelector('#feedback-close').addEventListener('click', () => dialog.close());
   document.querySelector('#feedback-cancel').addEventListener('click', () => dialog.close());
   type.addEventListener('change', () => {
@@ -703,6 +992,8 @@ function start() {
   requestAnimationFrame(() => bootScreen?.classList.add('is-ready'));
   window.setTimeout(() => bootScreen?.remove(), 550);
 
+  renderDashboardOverview();
+
   if (!games.length) {
     grid.hidden = true;
     emptyState.hidden = false;
@@ -717,12 +1008,15 @@ function start() {
     renderGames();
     renderRecent();
     renderTrending();
+    renderRecentlyAdded();
+    renderHomeRoutes();
+    bindEvents();
     drawAmbient();
   }
-  renderHomeOverview();
-  renderRecentlyAdded();
-  renderHomeLibrary();
-  bindEvents();
+
+  applyRoute(window.location.pathname);
+  bindNavigationControls();
+  window.addEventListener('popstate', () => applyRoute(window.location.pathname));
 }
 
 async function loadPublicCatalog() {
@@ -735,6 +1029,7 @@ async function loadPublicCatalog() {
   featuredGames = games.filter((game) => game.featured);
   slides = featuredGames.length ? featuredGames : games;
   slideIndex = 0;
+  renderDashboardOverview();
 }
 
 async function loadRoadmap() {
