@@ -62,12 +62,6 @@ function cookies(request) {
 function sameOrigin(request, url) {
   const origin = request.headers.get('origin');
   if (!origin) return true;
-    import {
-      createInitialRoadmap,
-      ensureRoadmapState,
-      publicRoadmapItems,
-      validateRoadmapInput,
-    } from './roadmap.js';
   try {
     return new URL(origin).origin === url.origin;
   } catch {
@@ -83,8 +77,7 @@ async function bodyJson(request) {
     body = JSON.parse(text);
   } catch {
     throw Object.assign(new Error('Request body must be valid JSON.'), { status: 400 });
-        const roadmapUpdated = ensureRoadmapState(state);
-        if (newGames.length || roadmapUpdated) {
+  }
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw Object.assign(new Error('Request body must be a JSON object.'), { status: 400 });
   }
@@ -95,7 +88,6 @@ function publicGame(game) {
   const { status, ...visible } = game;
   return visible;
 }
-          roadmap: state.roadmap,
 
 async function readStaticCatalog(request, env) {
   const catalogUrl = new URL('/Octo-Industries/BehindTheScenes/hub/catalog.js', request.url);
@@ -119,8 +111,18 @@ async function loadState(request, env) {
     }
     const existingIds = new Set(state.games.map((game) => game.id));
     const newGames = catalog.filter((game) => !existingIds.has(game.id)).map((game) => ({ ...game, status: 'published' }));
+    const addedAtById = new Map(catalog
+      .filter((game) => Number.isFinite(Date.parse(game.addedAt || '')))
+      .map((game) => [game.id, game.addedAt]));
+    let catalogDatesUpdated = false;
+    state.games = state.games.map((game) => {
+      const addedAt = addedAtById.get(game.id);
+      if (game.addedAt || !addedAt) return game;
+      catalogDatesUpdated = true;
+      return { ...game, addedAt };
+    });
     const roadmapUpdated = ensureRoadmapState(state);
-    if (newGames.length || roadmapUpdated) {
+    if (newGames.length || roadmapUpdated || catalogDatesUpdated) {
       state.games.push(...newGames);
       await saveState(env, state);
     }

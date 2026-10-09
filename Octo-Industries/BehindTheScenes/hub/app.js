@@ -2,17 +2,20 @@ let games = Array.isArray(window.OCTO_GAMES) ? [...window.OCTO_GAMES] : [];
 let byId = new Map(games.map((game) => [game.id, game]));
 const grid = document.querySelector('#game-grid');
 const searchInput = document.querySelector('#game-search');
+const homeSearchInput = document.querySelector('#home-game-search');
 const categoryList = document.querySelector('#category-list');
+const topCategoryList = document.querySelector('#top-category-list');
 const resultSummary = document.querySelector('#results-summary');
 const emptyState = document.querySelector('#empty-state');
-const recentSection = document.querySelector('#recent-section');
 const recentList = document.querySelector('#recent-list');
-const recentlyAddedSection = document.querySelector('#recently-added');
 const recentlyAddedList = document.querySelector('#recently-added-list');
 const trendingGrid = document.querySelector('#trending-grid');
+const homeTrendingPreview = document.querySelector('#home-trending-preview');
+const homeAddedPreview = document.querySelector('#home-added-preview');
+const homeLibraryGrid = document.querySelector('#home-library-grid');
 const comingGrid = document.querySelector('#coming-grid');
+const newsGrid = document.querySelector('#news-grid');
 let roadmapItems = [];
-let activeRoadmapCategory = 'all';
 let featuredGames = games.filter((game) => game.featured);
 let slides = featuredGames.length ? featuredGames : games;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -21,6 +24,8 @@ let slideIndex = 0;
 let searchTimer;
 let activeGallery;
 let galleryIndex = 0;
+const gamesPerPage = 15;
+let currentPage = 1;
 
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -35,10 +40,22 @@ function readRecent() {
   }
 }
 
+function readPlayCounts() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('octo-industries.play-counts') || '{}');
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+  } catch {
+    return {};
+  }
+}
+
 function markPlayed(game) {
   try {
     const recent = [game.id, ...readRecent().filter((id) => id !== game.id)].slice(0, 3);
     localStorage.setItem('octo-industries.recent', JSON.stringify(recent));
+    const playCounts = readPlayCounts();
+    playCounts[game.id] = (Number(playCounts[game.id]) || 0) + 1;
+    localStorage.setItem('octo-industries.play-counts', JSON.stringify(playCounts));
   } catch {
     return;
   }
@@ -53,13 +70,18 @@ function categories() {
   const counts = new Map();
   for (const game of games) counts.set(game.category, (counts.get(game.category) || 0) + 1);
   const options = [['All', games.length], ...[...counts.entries()].sort(([first], [second]) => first.localeCompare(second))];
-  categoryList.innerHTML = options.map(([name, count]) => `
+  const markup = options.map(([name, count]) => `
     <button class="category-chip${activeCategory === name ? ' is-active' : ''}" type="button" data-category="${escapeHtml(name)}" aria-pressed="${activeCategory === name}">
       ${escapeHtml(name === 'All' ? 'All games' : name)} <span>${String(count).padStart(2, '0')}</span>
     </button>`).join('');
+  if (categoryList) categoryList.innerHTML = markup;
+  if (topCategoryList) topCategoryList.innerHTML = options.map(([name, count]) => `
+    <button class="top-category-pill${activeCategory === name ? ' is-active' : ''}" type="button" data-category="${escapeHtml(name)}" aria-pressed="${activeCategory === name}">
+      ${escapeHtml(name === 'All' ? 'All' : name)} <span>${String(count).padStart(2, '0')}</span>
+    </button>`).join('');
 }
 
-function gameCard(game, index) {
+function gameCard(game, index, localPlayCount = null) {
   const tags = [game.category, ...(game.tags || [])].filter((tag, position, list) => list.indexOf(tag) === position).slice(0, 2);
   const hasThumbnail = Boolean(game.thumbnail);
   const hasGallery = Array.isArray(game.screenshots) && game.screenshots.length > 0;
@@ -67,6 +89,7 @@ function gameCard(game, index) {
     <article class="game-card" style="animation-delay:${Math.min(index * 45, 225)}ms" data-game-id="${escapeHtml(game.id)}">
       <a class="game-art" data-category="${escapeHtml(game.category)}" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}" aria-label="Play ${escapeHtml(game.title)}">
         ${hasThumbnail ? imageMarkup(game, 'game-image') : `<span class="art-index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>`}
+        ${localPlayCount !== null ? `<span class="trend-indicator">${localPlayCount} local plays</span>` : ''}
         <span class="art-live"><i></i> READY TO PLAY</span><span class="art-category">${escapeHtml(game.category.toUpperCase())}</span>
       </a>
       <div class="game-card-copy">
@@ -123,7 +146,17 @@ function renderGames() {
     if (sorting === 'recent') return (Date.parse(second.addedAt || '') || 0) - (Date.parse(first.addedAt || '') || 0) || first.title.localeCompare(second.title);
     return first.title.localeCompare(second.title);
   });
-  grid.innerHTML = matches.map(gameCard).join('');
+
+  const totalPages = Math.max(1, Math.ceil(matches.length / gamesPerPage));
+  if (currentPage > totalPages) currentPage = totalPages;
+  const offset = (currentPage - 1) * gamesPerPage;
+  const pageMatches = matches.slice(offset, offset + gamesPerPage);
+  const pagination = document.querySelector('#game-pagination');
+  const pageStatus = document.querySelector('#page-status');
+  const previousButton = document.querySelector('#games-previous');
+  const nextButton = document.querySelector('#games-next');
+
+  grid.innerHTML = pageMatches.map((game, index) => gameCard(game, index)).join('');
   grid.hidden = matches.length === 0;
   emptyState.hidden = matches.length > 0;
   grid.setAttribute('aria-busy', 'false');
@@ -131,52 +164,186 @@ function renderGames() {
     ? `${games.length} games, all ready to play`
     : `${matches.length} ${matches.length === 1 ? 'game' : 'games'} found`;
   document.querySelector('#search-clear').hidden = !searchInput.value;
+
+  const showPagination = matches.length > gamesPerPage;
+  pagination.hidden = !showPagination;
+  if (pageStatus) {
+    pageStatus.textContent = showPagination ? `Page ${currentPage} of ${totalPages}` : 'Page 1 of 1';
+  }
+  if (previousButton) previousButton.disabled = currentPage <= 1;
+  if (nextButton) nextButton.disabled = currentPage >= totalPages;
 }
 
 function renderRecent() {
   const recent = readRecent().map((id) => byId.get(id)).filter(Boolean);
-  recentSection.hidden = !recent.length;
+  document.querySelector('#recent-empty').hidden = recent.length > 0;
   recentList.innerHTML = recent.map((game) => `
     <a class="recent-item" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}">
       <span class="recent-thumb">${game.thumbnail ? imageMarkup(game, 'recent-image') : escapeHtml(game.title.slice(0, 1))}</span>
-      <span class="recent-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(game.category)} · Pick up and play</span></span>
-      <span class="recent-go" aria-hidden="true">↗</span>
+      <span class="recent-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(game.category)} · Quick Resume</span></span>
+      <span class="recent-go" aria-hidden="true">RESUME</span>
     </a>`).join('');
+}
+
+function renderHomeOverview() {
+  const categoryCount = new Set(games.map((game) => game.category).filter(Boolean)).size;
+  const playCounts = readPlayCounts();
+  const trendingCount = games.filter((game) => Number(playCounts[game.id]) > 0).length;
+  const recentCount = readRecent().length;
+  document.querySelector('#home-total-games').textContent = games.length;
+  document.querySelector('#home-ready-count').textContent = games.length;
+  document.querySelector('#home-category-count').textContent = categoryCount;
+  document.querySelector('#home-trending-count').textContent = trendingCount;
+  document.querySelector('#home-continue-count').textContent = recentCount;
+  document.querySelector('#home-browse-count').textContent = games.length;
+}
+
+function gamePreviewRow(game, detail) {
+  return `<a class="home-game-row" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}" aria-label="Play ${escapeHtml(game.title)}">
+    <span class="home-game-thumb">${game.thumbnail ? imageMarkup(game, 'recent-image') : escapeHtml(game.title.slice(0, 1))}</span>
+    <span class="home-game-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(detail)}</span></span>
+    <span class="home-game-action" aria-hidden="true">PLAY</span>
+  </a>`;
+}
+
+function gameAddedDate(game) {
+  const value = game.addedAt || game.publishedAt || game.createdAt;
+  const timestamp = Date.parse(value || '');
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function renderTrending() {
-  const picks = games.filter((game) => game.featured).slice(0, 3);
-  trendingGrid.innerHTML = picks.length
-    ? picks.map(gameCard).join('')
-    : '<p class="muted">Editor picks will appear here when a game is featured.</p>';
+  if (!trendingGrid) return;
+  const playCounts = readPlayCounts();
+  const rankedGames = [...games].sort((first, second) =>
+    (Number(playCounts[second.id]) || 0) - (Number(playCounts[first.id]) || 0)
+    || Number(second.featured) - Number(first.featured)
+    || first.title.localeCompare(second.title));
+  trendingGrid.innerHTML = rankedGames.length
+    ? rankedGames.slice(0, 24).map((game, index) => gameCard(game, index, Number(playCounts[game.id]) || 0)).join('')
+    : '<p class="view-empty">No games are available right now.</p>';
+  if (homeTrendingPreview) {
+    homeTrendingPreview.innerHTML = rankedGames.slice(0, 4)
+      .map((game) => gamePreviewRow(game, `${Number(playCounts[game.id]) || 0} local plays · ${game.category}`)).join('');
+  }
+}
+
+function renderHomeLibrary() {
+  if (!homeLibraryGrid) return;
+  const picks = [...games].sort((first, second) => Number(second.featured) - Number(first.featured) || first.title.localeCompare(second.title));
+  homeLibraryGrid.innerHTML = picks.slice(0, 10).map((game, index) => gameCard(game, index)).join('');
 }
 
 function renderRecentlyAdded() {
-  const recentGames = games.filter((game) => Number.isFinite(Date.parse(game.addedAt)))
-    .sort((first, second) => Date.parse(second.addedAt) - Date.parse(first.addedAt))
+  const recentGames = games.filter((game) => gameAddedDate(game) > 0)
+    .sort((first, second) => gameAddedDate(second) - gameAddedDate(first))
     .slice(0, 6);
-  recentlyAddedSection.hidden = recentGames.length === 0;
+  document.querySelector('#recently-added-empty').hidden = recentGames.length > 0;
   recentlyAddedList.innerHTML = recentGames.map((game) => `
     <a class="recent-item" href="${escapeHtml(game.launch)}" data-launch-id="${escapeHtml(game.id)}">
       <span class="recent-thumb">${game.thumbnail ? imageMarkup(game, 'recent-image') : escapeHtml(game.title.slice(0, 1))}</span>
-      <span class="recent-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(game.category)} · Added ${escapeHtml(new Date(game.addedAt).toLocaleDateString())}</span></span>
+      <span class="recent-copy"><b>${escapeHtml(game.title)}</b><span>${escapeHtml(game.category)} · Added ${escapeHtml(new Date(gameAddedDate(game)).toLocaleDateString())}</span></span>
       <span class="recent-go" aria-hidden="true">↗</span>
     </a>`).join('');
+  if (homeAddedPreview) {
+    homeAddedPreview.innerHTML = recentGames
+      .map((game) => gamePreviewRow(game, `${game.category} · Added ${new Date(gameAddedDate(game)).toLocaleDateString()}`)).join('');
+    document.querySelector('#home-added-empty').hidden = recentGames.length > 0;
+  }
 }
 
 const roadmapStatusLabels = {
   idea: 'Idea', planned: 'Planned', 'in-progress': 'In Progress', testing: 'Testing', 'on-hold': 'On Hold',
 };
 
-function renderComingSoon() {
-  const items = roadmapItems.filter((item) => activeRoadmapCategory === 'all' || item.category === activeRoadmapCategory);
-  comingGrid.innerHTML = items.length ? items.map((item) => `
-    <article class="coming-card">
-      <div class="coming-card-top"><span class="roadmap-status-badge" data-status="${escapeHtml(item.status)}">${escapeHtml(roadmapStatusLabels[item.status] || item.status)}</span><span class="coming-category">${escapeHtml(item.category)}</span></div>
-      <h3>${escapeHtml(item.title)}</h3>
-      <p>${escapeHtml(item.description)}</p>
-      <time datetime="${escapeHtml(item.updatedAt)}">Updated ${escapeHtml(new Date(item.updatedAt).toLocaleDateString())}</time>
-    </article>`).join('') : '<p class="muted">No public roadmap items are available right now.</p>';
+function roadmapCard(item) {
+  return `<article class="coming-card">
+    <div class="coming-card-top"><span class="roadmap-status-badge" data-status="${escapeHtml(item.status)}">${escapeHtml(roadmapStatusLabels[item.status] || item.status)}</span><span class="coming-category">${escapeHtml(item.category)}</span></div>
+    <h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.description)}</p>
+    <time datetime="${escapeHtml(item.updatedAt)}">Updated ${escapeHtml(new Date(item.updatedAt).toLocaleDateString())}</time>
+  </article>`;
+}
+
+function roadmapPreviewRow(item) {
+  return `<article class="home-roadmap-row"><span class="roadmap-status-badge" data-status="${escapeHtml(item.status)}">${escapeHtml(roadmapStatusLabels[item.status] || item.status)}</span><b>${escapeHtml(item.title)}</b><time datetime="${escapeHtml(item.updatedAt)}">${escapeHtml(new Date(item.updatedAt).toLocaleDateString())}</time></article>`;
+}
+
+function renderRoadmapViews() {
+  const activeItems = roadmapItems.filter((item) => !['released', 'archived'].includes(item.status))
+    .sort((first, second) => Date.parse(second.updatedAt || '') - Date.parse(first.updatedAt || ''));
+  const newsItems = activeItems.filter((item) => item.category === 'content');
+  const comingItems = activeItems.filter((item) => item.category !== 'content');
+  if (newsGrid) newsGrid.innerHTML = newsItems.length ? newsItems.map(roadmapCard).join('') : '<p class="view-empty">No news right now.</p>';
+  if (comingGrid) comingGrid.innerHTML = comingItems.length ? comingItems.map(roadmapCard).join('') : '<p class="view-empty">No upcoming items right now.</p>';
+  const latestUpdate = newsItems[0];
+  document.querySelector('#home-update-module').hidden = !latestUpdate;
+  document.querySelector('#home-update-preview').innerHTML = latestUpdate ? roadmapPreviewRow(latestUpdate) : '';
+  const updateLink = document.querySelector('#home-update-link');
+  const updateView = 'news';
+  updateLink.href = `/?view=${updateView}`;
+  updateLink.dataset.hubView = updateView;
+  updateLink.textContent = updateView === 'news' ? 'View news' : 'View roadmap';
+  document.querySelector('#home-roadmap-module').hidden = comingItems.length === 0;
+  document.querySelector('#home-roadmap-preview').innerHTML = comingItems.slice(0, 2).map(roadmapPreviewRow).join('');
+}
+
+function setDrawerOpen(open) {
+  const menuToggle = document.querySelector('#menu-toggle');
+  document.querySelector('#primary-nav').classList.toggle('is-open', open);
+  document.body.classList.toggle('nav-open', open);
+  document.querySelector('#nav-backdrop').hidden = !open;
+  menuToggle.setAttribute('aria-expanded', String(open));
+  menuToggle.setAttribute('aria-label', open ? 'Close Hub menu' : 'Open Hub menu');
+}
+
+const hubViewMetadata = {
+  home: { title: 'Octo Industries | Game Hub', description: 'Continue playing, browse featured games, or find your next game in the Octo Industries Hub.' },
+  games: { title: 'Games | Octo Industries', description: 'Search and filter the Octo Industries game collection by category, title, and tag.' },
+  trending: { title: 'Trending Games | Octo Industries', description: 'Browse games ranked by plays recorded on this device in the Octo Industries Hub.' },
+  'recently-added': { title: 'Recently Added | Octo Industries', description: 'Find newly added games in the Octo Industries game collection.' },
+  news: { title: 'News | Octo Industries', description: 'Read the latest Octo Industries game hub news and announcements.' },
+  'coming-soon': { title: 'Coming Soon | Octo Industries', description: 'See upcoming games and updates planned for Octo Industries.' },
+  about: { title: 'About | Octo Industries', description: 'Learn about Octo Industries, an independent gaming platform created by Mr. Octo.' },
+  contact: { title: 'Contact | Octo Industries', description: 'Contact Mr. Octo about Octo Industries, partnerships, suggestions, or issues.' },
+};
+
+function updateHubMetadata(view) {
+  const metadata = hubViewMetadata[view];
+  const viewUrl = new URL(window.location.href);
+  viewUrl.searchParams.set('view', view);
+  const canonicalUrl = new URL(window.location.pathname, window.location.origin);
+  if (view !== 'home') canonicalUrl.searchParams.set('view', view);
+  document.title = metadata.title;
+  document.querySelector('meta[name="description"]').content = metadata.description;
+  document.querySelector('meta[property="og:title"]').content = metadata.title;
+  document.querySelector('meta[property="og:description"]').content = metadata.description;
+  document.querySelector('meta[property="og:url"]').content = canonicalUrl.href;
+  document.querySelector('link[rel="canonical"]').href = canonicalUrl.href;
+}
+
+function setHubView(name, { focusSearch = false, focusHeading = false, focusTarget = '', pushState = false } = {}) {
+  const panels = [...document.querySelectorAll('[data-hub-panel]')];
+  const view = panels.some((panel) => panel.dataset.hubPanel === name) ? name : 'games';
+  const currentView = new URLSearchParams(window.location.search).get('view') || 'home';
+  if (pushState && currentView !== view) {
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('view', view);
+    window.history.pushState({ view }, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+  }
+  panels.forEach((panel) => { panel.hidden = panel.dataset.hubPanel !== view; });
+  document.querySelectorAll('#primary-nav [data-hub-view]').forEach((button) => {
+    const active = button.dataset.hubView === view;
+    button.classList.toggle('is-active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  updateHubMetadata(view);
+  setDrawerOpen(false);
+  requestAnimationFrame(() => {
+    if (focusSearch) searchInput.focus({ preventScroll: true });
+    else if (focusTarget) document.querySelector(focusTarget)?.focus({ preventScroll: true });
+    else if (focusHeading) panels.find((panel) => panel.dataset.hubPanel === view)?.querySelector('h1')?.focus({ preventScroll: true });
+  });
 }
 
 function renderFeatured() {
@@ -224,47 +391,73 @@ function bindEvents() {
     }
   }, true);
 
-  categoryList.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-category]');
-    if (!button) return;
-    activeCategory = button.dataset.category;
-    categories();
+  const categoryButtons = [categoryList, topCategoryList].filter(Boolean);
+  categoryButtons.forEach((list) => {
+    list.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-category]');
+      if (!button) return;
+      if (list === topCategoryList) setHubView('games', { pushState: true, focusHeading: true });
+      activeCategory = button.dataset.category;
+      currentPage = 1;
+      categories();
+      renderGames();
+    });
+  });
+
+  const updateSearch = (event) => {
+    searchInput.value = event.currentTarget.value;
+    homeSearchInput.value = searchInput.value;
+    currentPage = 1;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(renderGames, reducedMotion ? 0 : 70);
+  };
+  searchInput.addEventListener('input', updateSearch);
+  homeSearchInput.addEventListener('input', updateSearch);
+  document.querySelector('#home-search-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    searchInput.value = homeSearchInput.value;
+    renderGames();
+    setHubView('games', { pushState: true, focusSearch: true });
+  });
+  document.querySelector('#game-sort').addEventListener('change', () => {
+    currentPage = 1;
     renderGames();
   });
 
-  searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(renderGames, reducedMotion ? 0 : 70);
+  document.querySelector('#games-previous').addEventListener('click', () => {
+    currentPage = Math.max(1, currentPage - 1);
+    renderGames();
   });
-  document.querySelector('#game-sort').addEventListener('change', renderGames);
+  document.querySelector('#games-next').addEventListener('click', () => {
+    const matches = getMatches();
+    const totalPages = Math.max(1, Math.ceil(matches.length / gamesPerPage));
+    currentPage = Math.min(totalPages, currentPage + 1);
+    renderGames();
+  });
 
   document.querySelector('#search-clear').addEventListener('click', () => {
     searchInput.value = '';
+    homeSearchInput.value = '';
     searchInput.focus();
+    currentPage = 1;
     renderGames();
   });
 
   document.querySelector('#clear-filters').addEventListener('click', () => {
     activeCategory = 'All';
     searchInput.value = '';
+    homeSearchInput.value = '';
+    currentPage = 1;
     categories();
     renderGames();
     searchInput.focus();
   });
 
-  document.querySelectorAll('.nav-search').forEach((button) => button.addEventListener('click', () => {
-    document.querySelector('#games').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
-    window.setTimeout(() => searchInput.focus({ preventScroll: true }), reducedMotion ? 0 : 350);
-    document.querySelector('#primary-nav').classList.remove('is-open');
-    document.querySelector('#menu-toggle').setAttribute('aria-expanded', 'false');
-    document.querySelector('#menu-toggle').setAttribute('aria-label', 'Open navigation');
-    document.body.classList.remove('nav-open');
-    document.querySelector('#nav-backdrop').hidden = true;
+  document.querySelectorAll('[data-hub-view]').forEach((button) => button.addEventListener('click', (event) => {
+    if (button.tagName === 'A') event.preventDefault();
+    setHubView(button.dataset.hubView, { pushState: true, focusHeading: true, focusTarget: button.dataset.focusTarget || '' });
   }));
-  document.querySelectorAll('[data-roadmap-category]').forEach((link) => link.addEventListener('click', () => {
-    activeRoadmapCategory = link.dataset.roadmapCategory;
-    renderComingSoon();
-  }));
+  document.querySelector('[data-hub-action="search"]').addEventListener('click', () => setHubView('games', { focusSearch: true, focusHeading: false, pushState: true }));
 
   document.querySelector('#feature-previous').addEventListener('click', () => showSlide(-1));
   document.querySelector('#feature-next').addEventListener('click', () => showSlide(1));
@@ -310,31 +503,18 @@ function bindEvents() {
       return;
     }
     const launch = event.target.closest('[data-launch-id]');
-    if (launch && byId.has(launch.dataset.launchId)) markPlayed(byId.get(launch.dataset.launchId));
-    if (event.target.closest('#primary-nav a')) {
-      document.querySelector('#primary-nav').classList.remove('is-open');
-      document.querySelector('#menu-toggle').setAttribute('aria-expanded', 'false');
-      document.querySelector('#menu-toggle').setAttribute('aria-label', 'Open navigation');
-      document.body.classList.remove('nav-open');
-      document.querySelector('#nav-backdrop').hidden = true;
+    if (launch && byId.has(launch.dataset.launchId)) {
+      markPlayed(byId.get(launch.dataset.launchId));
+      renderTrending();
     }
+    if (event.target.closest('#primary-nav a')) setDrawerOpen(false);
   });
 
   const menuToggle = document.querySelector('#menu-toggle');
-  menuToggle.addEventListener('click', () => {
-    const open = menuToggle.getAttribute('aria-expanded') !== 'true';
-    menuToggle.setAttribute('aria-expanded', String(open));
-    menuToggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-    document.querySelector('#primary-nav').classList.toggle('is-open', open);
-    document.body.classList.toggle('nav-open', open);
-    document.querySelector('#nav-backdrop').hidden = !open;
-  });
+  menuToggle.addEventListener('click', () => setDrawerOpen(menuToggle.getAttribute('aria-expanded') !== 'true'));
   document.querySelector('#nav-backdrop').addEventListener('click', () => {
-    document.querySelector('#primary-nav').classList.remove('is-open');
-    menuToggle.setAttribute('aria-expanded', 'false');
-    menuToggle.setAttribute('aria-label', 'Open navigation');
-    document.body.classList.remove('nav-open');
-    document.querySelector('#nav-backdrop').hidden = true;
+    setDrawerOpen(false);
+    menuToggle.focus();
   });
 
   document.addEventListener('keydown', (event) => {
@@ -346,34 +526,24 @@ function bindEvents() {
     }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      document.querySelector('#games').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
-      searchInput.focus({ preventScroll: true });
+      setHubView('games', { focusSearch: true, pushState: true });
     }
     if (event.key === 'Escape') {
-      document.querySelector('#primary-nav').classList.remove('is-open');
-      menuToggle.setAttribute('aria-expanded', 'false');
-      menuToggle.setAttribute('aria-label', 'Open navigation');
-      document.body.classList.remove('nav-open');
-      document.querySelector('#nav-backdrop').hidden = true;
-      if (document.activeElement === searchInput && searchInput.value) {
+      const drawerWasOpen = document.querySelector('#menu-toggle').getAttribute('aria-expanded') === 'true';
+      setDrawerOpen(false);
+      if (drawerWasOpen) document.querySelector('#menu-toggle').focus();
+      const focusedSearch = document.activeElement === searchInput || document.activeElement === homeSearchInput;
+      if (focusedSearch && (searchInput.value || homeSearchInput.value)) {
         searchInput.value = '';
+        homeSearchInput.value = '';
         renderGames();
       }
     }
   });
+  window.addEventListener('popstate', () => {
+    setHubView(new URLSearchParams(window.location.search).get('view') || 'home');
+  });
 
-  const navLinks = [...document.querySelectorAll('.primary-nav .nav-link[href^="#"]')];
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        navLinks.forEach((link) => link.classList.toggle('is-active', link.getAttribute('href') === `#${entry.target.id}`));
-      }
-    }, { rootMargin: '-25% 0px -65% 0px' });
-    document.querySelectorAll('#home, #trending, #recently-added, #coming-soon, #games, #about').forEach((section) => {
-      if (!section.hidden) observer.observe(section);
-    });
-  }
 }
 
 function browserDeviceInfo() {
@@ -419,9 +589,7 @@ function bindFeedbackForm() {
     game.append(option);
   }
   const open = () => {
-    document.querySelector('#primary-nav').classList.remove('is-open');
-    document.querySelector('#menu-toggle').setAttribute('aria-expanded', 'false');
-    document.querySelector('#menu-toggle').setAttribute('aria-label', 'Open navigation');
+    setDrawerOpen(false);
     dialog.showModal();
   };
   document.querySelectorAll('#feedback-open, [data-feedback-open]').forEach((button) => button.addEventListener('click', open));
@@ -543,17 +711,18 @@ function start() {
     resultSummary.textContent = 'No game catalog found';
   } else {
     document.querySelector('#header-count').textContent = String(games.length).padStart(2, '0');
-    document.querySelector('#library-status').textContent = `${games.length} GAMES READY TO PLAY`;
     document.querySelector('#library-count').innerHTML = `${String(games.length).padStart(2, '0')} GAMES IN THE COLLECTION <span>↘</span>`;
     categories();
     renderFeatured();
     renderGames();
     renderRecent();
     renderTrending();
-    renderRecentlyAdded();
-    bindEvents();
     drawAmbient();
   }
+  renderHomeOverview();
+  renderRecentlyAdded();
+  renderHomeLibrary();
+  bindEvents();
 }
 
 async function loadPublicCatalog() {
@@ -579,8 +748,11 @@ async function loadRoadmap() {
     console.error('Unable to load the public roadmap.', error);
     roadmapItems = [];
   }
-  renderComingSoon();
+  renderRoadmapViews();
 }
+
+const initialHubView = new URLSearchParams(window.location.search).get('view') || 'home';
+setHubView(initialHubView);
 
 Promise.all([
   loadPublicCatalog().catch((error) => console.error('Unable to load the live game catalog; using the generated catalog instead.', error)),

@@ -1,6 +1,7 @@
 window.OCTO_GAMES = Object.freeze([
   {
     "id": "age-of-war",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Age of War",
     "description": "Command your civilization through multiple eras in a fast-paced base-defense battle against an opposing army.",
     "version": "1.0.0",
@@ -20,7 +21,27 @@ window.OCTO_GAMES = Object.freeze([
     "screenshots": []
   },
   {
+    "id": "baggio-magical-kicks",
+    "title": "Baggio Magical Kicks",
+    "description": "Take free kicks as Roberto Baggio. Adjust height, direction, and swerve while accounting for distance, the wall, and wind.",
+    "addedAt": "2026-10-08T00:00:00.000Z",
+    "category": "Sports",
+    "tags": [
+      "football",
+      "soccer",
+      "free kick",
+      "sports",
+      "flash"
+    ],
+    "featured": false,
+    "launch": "Octo-Industries/Baggio-Magical-Kicks/index.html",
+    "thumbnail": "Octo-Industries/Baggio-Magical-Kicks/hub-banner.svg",
+    "accent": "#46a8e6",
+    "screenshots": []
+  },
+  {
     "id": "block-blast",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Block Blast",
     "description": "Fit shaped blocks together, clear complete rows and columns, and chase a higher score.",
     "version": "1.1.8",
@@ -38,6 +59,7 @@ window.OCTO_GAMES = Object.freeze([
   },
   {
     "id": "endless-siege",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Endless Siege",
     "description": "Build a line of defensive towers, upgrade your arsenal, and outlast waves of invading orcs.",
     "version": "1.0.0",
@@ -55,6 +77,7 @@ window.OCTO_GAMES = Object.freeze([
   },
   {
     "id": "idle-mining-empire",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Idle Mining Empire",
     "description": "Build a mineral mining business by managing mineshafts, workers, elevators, and upgrades.",
     "version": "1.0.0",
@@ -73,6 +96,7 @@ window.OCTO_GAMES = Object.freeze([
   },
   {
     "id": "miragine-war",
+    "addedAt": "2026-10-07T12:00:00.000Z",
     "title": "Miragine War",
     "description": "Pick the right units and skills to counter the enemy in a side-scrolling war between Red and Blue, in single-player or two-player battles.",
     "version": "1.0.0",
@@ -98,6 +122,7 @@ window.OCTO_GAMES = Object.freeze([
   },
   {
     "id": "ragdoll-archers",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Ragdoll Archers",
     "description": "Aim, draw, and fire in physics-driven duels as ragdoll archers battle for the last shot.",
     "version": "1.1.1",
@@ -114,7 +139,29 @@ window.OCTO_GAMES = Object.freeze([
     "screenshots": []
   },
   {
+    "id": "ragdoll-hit",
+    "title": "Ragdoll Hit",
+    "description": "Fight through unpredictable ragdoll duels, use weapons, and knock opponents out of the arena.",
+    "addedAt": "2026-10-09T00:00:00.000Z",
+    "category": "Action",
+    "tags": [
+      "ragdoll",
+      "fighting",
+      "physics",
+      "stickman"
+    ],
+    "featured": false,
+    "launch": "Octo-Industries/Ragdoll-Hit/index.html",
+    "thumbnail": "Octo-Industries/Ragdoll-Hit/hub-banner.svg",
+    "accent": "#4d4d4d",
+    "screenshots": [
+      "Octo-Industries/Ragdoll-Hit/screenshots/1.jpg",
+      "Octo-Industries/Ragdoll-Hit/screenshots/2.jpg"
+    ]
+  },
+  {
     "id": "red-ball-4",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Red Ball 4",
     "description": "Roll, jump, and solve physics puzzles across colorful platforming levels.",
     "version": "1.08.03",
@@ -138,6 +185,7 @@ window.OCTO_GAMES = Object.freeze([
   },
   {
     "id": "stickman-hook",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Stickman Hook",
     "description": "Grapple, swing through each course, and release at just the right moment to reach the finish.",
     "version": "1.0.0",
@@ -155,6 +203,7 @@ window.OCTO_GAMES = Object.freeze([
   },
   {
     "id": "subway-surfers-new-york",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Subway Surfers: New York",
     "description": "Run through the New York subway, dodge trains, collect coins, and escape the inspector.",
     "category": "Runner",
@@ -174,6 +223,7 @@ window.OCTO_GAMES = Object.freeze([
   },
   {
     "id": "tiny-fishing",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Tiny Fishing",
     "description": "Cast your line, catch fish, and upgrade your gear. The game loads from its live online host.",
     "category": "Arcade",
@@ -189,6 +239,7 @@ window.OCTO_GAMES = Object.freeze([
   },
   {
     "id": "toss-the-turtle",
+    "addedAt": "2026-10-06T12:00:00.000Z",
     "title": "Toss The Turtle",
     "description": "Launch, bounce, and fly farther on each attempt in a physics-driven arcade challenge.",
     "version": "1.0.0",

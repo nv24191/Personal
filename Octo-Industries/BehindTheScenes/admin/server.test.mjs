@@ -102,8 +102,27 @@ test('admin service protects and manages the canonical library', async (t) => {
   assert.equal(homepage.status, 200);
   const homepageHtml = await homepage.text();
   assert.match(homepageHtml, /Octo Industries/);
-  assert.match(homepageHtml, /href="\/admin">Admin Dashboard<\/a>/);
-  assert.match(homepageHtml, /class="footer-admin-link" href="\/admin"/);
+  assert.match(homepageHtml, /href="\/admin"/);
+  assert.match(homepageHtml, /data-hub-view="games"/);
+  assert.match(homepageHtml, /data-hub-view="coming-soon"/);
+  for (const view of ['home', 'games', 'trending', 'recently-added', 'news', 'coming-soon', 'about', 'contact']) {
+    assert.match(homepageHtml, new RegExp(`href="/\\?view=${view}" data-hub-view="${view}"`));
+    assert.match(homepageHtml, new RegExp(`data-hub-panel="${view}"`));
+  }
+  assert.match(homepageHtml, /rel="canonical"/);
+  assert.match(homepageHtml, /property="og:image"/);
+  assert.match(homepageHtml, /id="home-overview-heading">Platform Overview/);
+  assert.match(homepageHtml, /id="home-browse-count"/);
+  assert.match(homepageHtml, /id="home-library-grid"/);
+  assert.match(homepageHtml, /id="top-category-list"/);
+  assert.match(homepageHtml, /class="home-feature-row"/);
+  assert.match(homepageHtml, /class="home-lower-row"/);
+  assert.match(homepageHtml, /class="menu-label">Hub/);
+  assert.match(homepageHtml, /id="home-trending-preview"/);
+  assert.match(homepageHtml, /id="home-added-preview"/);
+  assert.match(homepageHtml, /id="home-update-module"[^>]*hidden/);
+  assert.match(homepageHtml, /id="home-roadmap-module"[^>]*hidden/);
+  assert.doesNotMatch(homepageHtml, /class="footer-admin-link"|class="back-to-top"/);
   const adminPage = await fetch(`${baseUrl}/admin`);
   assert.equal(adminPage.status, 200);
   const adminHtml = await adminPage.text();

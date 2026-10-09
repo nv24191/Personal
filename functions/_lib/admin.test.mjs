@@ -150,6 +150,31 @@ function testEnvironment(password) {
   };
 }
 
+test('public catalog backfills addedAt for existing D1 games without overwriting edits', async () => {
+  const env = testEnvironment('backfill-test');
+  const source = await readFile(catalogFile, 'utf8');
+  const catalogMatch = /Object\.freeze\(([\s\S]*)\);\s*$/.exec(source);
+  assert.ok(catalogMatch);
+  const catalogGames = JSON.parse(catalogMatch[1]);
+  const existingGames = catalogGames.map(({ addedAt, ...game }, index) => ({
+    ...game,
+    title: index === 0 ? 'Owner-edited title' : game.title,
+    status: 'published',
+  }));
+  env.ADMIN_DB.state = JSON.stringify({ games: existingGames, jobs: [], activity: [], roadmap: [] });
+
+  const response = await handleCatalog(new Request('https://octo-test.pages.dev/api/catalog'), env);
+  assert.equal(response.status, 200);
+  const publicGames = await response.json();
+  for (const game of catalogGames) {
+    assert.equal(publicGames.find((entry) => entry.id === game.id)?.addedAt, game.addedAt);
+  }
+  assert.equal(publicGames[0].title, 'Owner-edited title');
+  const savedState = JSON.parse(env.ADMIN_DB.state);
+  assert.equal(savedState.games[0].title, 'Owner-edited title');
+  assert.ok(savedState.games.every((game) => game.addedAt));
+});
+
 test('Cloudflare admin login, CSRF protection, catalog edits, and logout', async () => {
   const password = `test-${randomBytes(12).toString('hex')}`;
   const env = testEnvironment(password);

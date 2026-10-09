@@ -1,5 +1,6 @@
 {
   "id": "block-blast",
+  "addedAt": "2026-10-06T12:00:00.000Z",
   "title": "Block Blast",
   "description": "Fit shaped blocks together, clear complete rows and columns, and chase a higher score.",
   "version": "1.1.8",
