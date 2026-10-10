@@ -134,14 +134,10 @@ function assetReference(gameDirectory, value) {
 function bannerSvg(game, gameDirectory) {
   const accent = /^#[\da-f]{6}$/i.test(game.accent || '') ? game.accent : '#65e6e3';
   const title = xmlEscape(game.title);
-  const sourceValue = game.bannerSource || game.thumbnail || '';
-  const sourceAsset = sourceValue ? resolveGameFile(gameDirectory, sourceValue) : '';
+  const source = assetReference(gameDirectory, game.bannerSource || game.thumbnail || '');
   const fit = game.bannerFit === 'contain' ? 'xMidYMid meet' : 'xMidYMid slice';
-  const sourceReference = sourceAsset
-    ? relative(gameDirectory, resolve(root, sourceAsset)).split(sep).join('/')
-    : '';
-  const artwork = sourceReference
-    ? `<rect width="1200" height="675" fill="#000"/><image href="${xmlEscape(sourceReference)}" x="0" y="0" width="1200" height="675" preserveAspectRatio="${fit}"/>`
+  const artwork = source
+    ? `<rect width="1200" height="675" fill="#000"/><image href="${xmlEscape(source)}" x="0" y="0" width="1200" height="675" preserveAspectRatio="${fit}"/>`
     : `<rect width="1200" height="675" fill="#08111a"/><circle cx="900" cy="330" r="330" fill="${accent}" fill-opacity=".13"/>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-label="${title} game artwork">
