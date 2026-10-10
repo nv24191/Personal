@@ -140,7 +140,14 @@
                   <label class="visually-hidden" for="roadmap-priority-filter">Filter by priority</label><select id="roadmap-priority-filter"><option value="all">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select>
                   <label class="visually-hidden" for="roadmap-sort">Sort roadmap</label><select id="roadmap-sort"><option value="updated">Recently updated</option><option value="priority">Priority</option><option value="title">Title A to Z</option><option value="created">Recently created</option></select>
                 </div>
-                <div class="roadmap-table-wrap"><table class="roadmap-table"><caption class="visually-hidden">Manage Octo Industries roadmap features</caption><thead><tr><th scope="col">Feature</th><th scope="col">Status</th><th scope="col">Category</th><th scope="col">Priority</th><th scope="col">Created</th><th scope="col">Updated</th><th scope="col">Actions</th></tr></thead><tbody id="roadmap-list"></tbody></table></div>
+                <div class="roadmap-bulk">
+                  <label class="visually-hidden" for="roadmap-bulk-status">Set selected roadmap items status</label>
+                  <select id="roadmap-bulk-status"><option value="">Bulk status…</option><option value="idea">Idea</option><option value="planned">Planned</option><option value="in-progress">In Progress</option><option value="testing">Testing</option><option value="released">Released</option><option value="on-hold">On Hold</option><option value="archived">Archived</option></select>
+                  <button class="small-button" id="roadmap-bulk-apply" type="button">Apply to selected</button>
+                  <span class="subtle" id="roadmap-selection-count">0 selected</span>
+                  <label class="check-label"><input id="roadmap-select-all" type="checkbox" aria-label="Select all visible roadmap items"> All visible</label>
+                </div>
+                <div class="roadmap-table-wrap"><table class="roadmap-table"><caption class="visually-hidden">Manage Octo Industries roadmap features</caption><thead><tr><th scope="col"><input id="roadmap-header-select" type="checkbox" aria-label="Toggle all roadmap items"></th><th scope="col">Feature</th><th scope="col">Status</th><th scope="col">Category</th><th scope="col">Priority</th><th scope="col">Created</th><th scope="col">Updated</th><th scope="col">Actions</th></tr></thead><tbody id="roadmap-list"></tbody></table></div>
                 <p class="subtle roadmap-count" id="roadmap-count" aria-live="polite"></p>
               </section>
             </section>

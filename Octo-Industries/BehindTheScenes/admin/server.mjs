@@ -1059,6 +1059,30 @@ async function handleRequest(request, response) {
       sendJson(response, 201, item);
       return;
     }
+    if (pathname === '/api/admin/roadmap/bulk' && request.method === 'POST') {
+      const body = await readJson(request);
+      if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 50 || body.ids.some((id) => typeof id !== 'string' || !/^[a-z0-9-]+$/.test(id))) {
+        sendJson(response, 400, { error: 'Select between 1 and 50 valid roadmap items.' });
+        return;
+      }
+      const status = validateRoadmapInput({ status: body.status }, { partial: true }).status;
+      const seen = new Set();
+      let updated = 0;
+      const now = new Date().toISOString();
+      for (const id of body.ids) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const index = state.roadmap.findIndex((item) => item.id === id);
+        if (index < 0) continue;
+        const item = { ...state.roadmap[index], status, updatedAt: now };
+        state.roadmap[index] = item;
+        updated += 1;
+        recordActivity(`Updated roadmap item: ${item.title} to ${status}`);
+      }
+      if (updated) await saveState();
+      sendJson(response, 200, { updated, status });
+      return;
+    }
     const roadmapMatch = /^\/api\/admin\/roadmap\/([a-z0-9-]+)$/.exec(pathname);
     if (roadmapMatch) {
       const [, id] = roadmapMatch;

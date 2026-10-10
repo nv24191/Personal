@@ -164,9 +164,15 @@ test('admin service protects and manages the canonical library', async (t) => {
   assert.equal(roadmapUpdate.status, 200);
   const updatedRoadmap = await roadmapUpdate.json();
   assert.equal(updatedRoadmap.status, 'testing');
+  const bulkRoadmapUpdate = await fetch(`${baseUrl}/api/admin/roadmap/bulk`, {
+    method: 'POST', headers: writeHeaders,
+    body: JSON.stringify({ ids: [roadmapItem.id], status: 'on-hold' }),
+  });
+  assert.equal(bulkRoadmapUpdate.status, 200);
+  assert.deepEqual(await bulkRoadmapUpdate.json(), { updated: 1, status: 'on-hold' });
   const publicUpdatedRoadmap = await (await fetch(`${baseUrl}/api/roadmap`)).json();
   const publicSearchAnalytics = publicUpdatedRoadmap.find((item) => item.id === roadmapItem.id);
-  assert.equal(publicSearchAnalytics.status, 'testing');
+  assert.equal(publicSearchAnalytics.status, 'on-hold');
   assert.equal('internalNotes' in publicSearchAnalytics, false);
   const roadmapDelete = await fetch(`${baseUrl}/api/admin/roadmap/${roadmapItem.id}`, { method: 'DELETE', headers: writeHeaders });
   assert.equal(roadmapDelete.status, 200);

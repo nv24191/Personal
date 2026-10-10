@@ -13,6 +13,7 @@ let toastTimer;
 let feedbackEntries = [];
 const openedFeedback = new Set();
 const selectedFeedback = new Set();
+const selectedRoadmap = new Set();
 const roadmapStatusLabels = {
   idea: 'Idea', planned: 'Planned', 'in-progress': 'In Progress', testing: 'Testing',
   released: 'Released', 'on-hold': 'On Hold', archived: 'Archived',
@@ -358,10 +359,13 @@ function renderRoadmap() {
   const list = document.querySelector('#roadmap-list');
   const summaryContainer = document.querySelector('#roadmap-status-summary');
   const summaryStatuses = ['idea', 'planned', 'in-progress', 'testing', 'released', 'on-hold', 'archived'];
+  const visibleIds = new Set(filtered.map((item) => item.id));
+  for (const id of selectedRoadmap) if (!routeMapHasId(id)) selectedRoadmap.delete(id);
   summaryContainer.innerHTML = summaryStatuses.map((value) => `<button class="roadmap-status-card" type="button" data-roadmap-filter="${value}" aria-pressed="${status === value}">
     <span>${escapeHtml(roadmapStatusLabels[value])}</span><strong>${roadmapItems.filter((item) => item.status === value).length}</strong>
   </button>`).join('');
   list.innerHTML = filtered.length ? filtered.map((item) => `<tr>
+    <td><label class="roadmap-select-label"><input type="checkbox" data-roadmap-select="${escapeHtml(item.id)}"${selectedRoadmap.has(item.id) ? ' checked' : ''} aria-label="Select ${escapeHtml(item.title)}"></label></td>
     <td><strong>${escapeHtml(item.title)}</strong><span class="roadmap-description">${escapeHtml(item.description)}</span></td>
     <td><span class="roadmap-status" data-status="${escapeHtml(item.status)}">${escapeHtml(roadmapStatusLabels[item.status])}</span></td>
     <td>${escapeHtml(item.category)}</td>
@@ -373,9 +377,16 @@ function renderRoadmap() {
       <button class="small-button" type="button" data-roadmap-action="archive" data-id="${escapeHtml(item.id)}" aria-label="${item.status === 'archived' ? 'Restore' : 'Archive'} ${escapeHtml(item.title)}" title="${item.status === 'archived' ? 'Restore' : 'Archive'}">${item.status === 'archived' ? 'Restore' : 'Archive'}</button>
       <button class="small-button roadmap-delete" type="button" data-roadmap-action="delete" data-id="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(item.title)}" title="Delete">Delete</button>
     </div></td>
-  </tr>`).join('') : '<tr><td colspan="7"><p class="muted roadmap-empty">No roadmap features match these filters.</p></td></tr>';
+  </tr>`).join('') : '<tr><td colspan="8"><p class="muted roadmap-empty">No roadmap features match these filters.</p></td></tr>';
+  document.querySelector('#roadmap-selection-count').textContent = `${selectedRoadmap.size} selected`;
+  document.querySelector('#roadmap-select-all').checked = visibleIds.size > 0 && [...visibleIds].every((id) => selectedRoadmap.has(id));
+  document.querySelector('#roadmap-header-select').checked = visibleIds.size > 0 && [...visibleIds].every((id) => selectedRoadmap.has(id));
   document.querySelector('#roadmap-count').textContent = `${filtered.length} of ${roadmapItems.length} features`;
   renderOverview();
+}
+
+function routeMapHasId(id) {
+  return roadmapItems.some((item) => item.id === id);
 }
 
 function searchAdmin(query) {
@@ -906,6 +917,70 @@ document.querySelector('#feedback-bulk-apply').addEventListener('click', async (
     if (status === 'new') ids.forEach((id) => openedFeedback.delete(id));
     selectedFeedback.clear();
     document.querySelector('#feedback-select-all').checked = false;
+    await refreshDashboard();
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector('#roadmap-select-all').addEventListener('change', (event) => {
+  const visible = [...document.querySelectorAll('#roadmap-list [data-roadmap-select]')].map((checkbox) => checkbox.dataset.roadmapSelect);
+  if (event.currentTarget.checked) {
+    for (const id of visible) {
+      if (selectedRoadmap.size >= 50 && !selectedRoadmap.has(id)) break;
+      selectedRoadmap.add(id);
+    }
+  } else {
+    for (const id of visible) selectedRoadmap.delete(id);
+  }
+  renderRoadmap();
+});
+document.querySelector('#roadmap-header-select').addEventListener('change', (event) => {
+  const visible = [...document.querySelectorAll('#roadmap-list [data-roadmap-select]')].map((checkbox) => checkbox.dataset.roadmapSelect);
+  if (event.currentTarget.checked) {
+    for (const id of visible) {
+      if (selectedRoadmap.size >= 50 && !selectedRoadmap.has(id)) break;
+      selectedRoadmap.add(id);
+    }
+  } else {
+    for (const id of visible) selectedRoadmap.delete(id);
+  }
+  renderRoadmap();
+});
+document.querySelector('#roadmap-list').addEventListener('change', (event) => {
+  const checkbox = event.target.closest('[data-roadmap-select]');
+  if (!checkbox) return;
+  const id = checkbox.dataset.roadmapSelect;
+  if (checkbox.checked) {
+    if (selectedRoadmap.size >= 50 && !selectedRoadmap.has(id)) {
+      checkbox.checked = false;
+      showToast('Select up to 50 roadmap items per bulk action.');
+      return;
+    }
+    selectedRoadmap.add(id);
+  } else {
+    selectedRoadmap.delete(id);
+  }
+  document.querySelector('#roadmap-selection-count').textContent = `${selectedRoadmap.size} selected`;
+  document.querySelector('#roadmap-select-all').checked = [...document.querySelectorAll('#roadmap-list [data-roadmap-select]')].length > 0 && [...document.querySelectorAll('#roadmap-list [data-roadmap-select]')].every((input) => selectedRoadmap.has(input.dataset.roadmapSelect));
+  document.querySelector('#roadmap-header-select').checked = [...document.querySelectorAll('#roadmap-list [data-roadmap-select]')].length > 0 && [...document.querySelectorAll('#roadmap-list [data-roadmap-select]')].every((input) => selectedRoadmap.has(input.dataset.roadmapSelect));
+});
+document.querySelector('#roadmap-bulk-apply').addEventListener('click', async (event) => {
+  const ids = [...selectedRoadmap];
+  const status = document.querySelector('#roadmap-bulk-status').value;
+  if (!ids.length || !status) {
+    showToast('Select roadmap items and choose a status first.');
+    return;
+  }
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const result = await api('/api/admin/roadmap/bulk', { method: 'POST', body: JSON.stringify({ ids, status }) });
+    showToast(`Updated ${result.updated} roadmap item${result.updated === 1 ? '' : 's'}.`);
+    selectedRoadmap.clear();
+    document.querySelector('#roadmap-bulk-status').value = '';
     await refreshDashboard();
   } catch (error) {
     showToast(error.message);
