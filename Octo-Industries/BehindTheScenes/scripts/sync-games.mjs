@@ -184,9 +184,14 @@ const games = gamesToRegister.map(({ gameDirectory, manifest }) => {
   const {
     bannerSource,
     bannerFit,
+    thumbnailDirect,
     screenshots: configuredScreenshots,
     ...metadata
   } = game;
+  const directThumbnail = thumbnailDirect ? resolveGameFile(gameDirectory, game.thumbnail || '') : '';
+  if (thumbnailDirect && !directThumbnail) {
+    throw new Error(`Direct thumbnail does not exist for ${game.title}: ${game.thumbnail}`);
+  }
 
   return {
     ...metadata,
@@ -194,9 +199,9 @@ const games = gamesToRegister.map(({ gameDirectory, manifest }) => {
       ? game.addedAt
       : previousAddedAt.get(game.id) || syncDate,
     launch,
-    thumbnail: bannerPath
+    thumbnail: directThumbnail || (bannerPath
       ? relative(root, bannerPath).split(sep).map(encodeURIComponent).join('/')
-      : '',
+      : ''),
     screenshots: screenshotReferences(gameDirectory, configuredScreenshots),
     tags: Array.isArray(game.tags) ? game.tags : [],
     featured: game.featured === true,

@@ -10,6 +10,7 @@
   "thumbnail": "hub/banner-source.jpg",
   "bannerSource": "hub/banner-source.jpg",
   "bannerFit": "contain",
+  "thumbnailDirect": true,
   "accent": "#46a8e6",
   "screenshots": []
 }

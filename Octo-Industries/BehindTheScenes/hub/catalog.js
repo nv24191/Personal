@@ -35,7 +35,7 @@ window.OCTO_GAMES = Object.freeze([
     ],
     "featured": false,
     "launch": "Octo-Industries/Baggio-Magical-Kicks/index.html",
-    "thumbnail": "Octo-Industries/Baggio-Magical-Kicks/hub-banner.svg",
+    "thumbnail": "Octo-Industries/Baggio-Magical-Kicks/hub/banner-source.jpg",
     "accent": "#46a8e6",
     "screenshots": []
   },
